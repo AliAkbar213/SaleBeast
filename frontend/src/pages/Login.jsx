@@ -34,6 +34,7 @@ function Login() {
   const [form, setForm] = useState(initialForm)
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { updateUser } = useContext(AuthContext)
   const navigate = useNavigate()
@@ -101,34 +102,42 @@ function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (isSubmitting) return
+
     const nextErrors = validate(form)
     setErrors(nextErrors)
 
     if (Object.keys(nextErrors).length > 0) return
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(form)
-    })
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(form)
+      })
 
-    const data = await res.json()
+      const data = await res.json()
 
-    if (!res.ok) {
-      if (data.err == "user does not exist") {
-        setErrors((prev) => ({ ...prev, email: "User does not exist" }))
-      } else if (data.err == "password incorrect") {
-        setErrors((prev) => ({ ...prev, password: "Password is incorrect" }))
+      if (!res.ok) {
+        if (data.err == "user does not exist") {
+          setErrors((prev) => ({ ...prev, email: "User does not exist" }))
+        } else if (data.err == "password incorrect") {
+          setErrors((prev) => ({ ...prev, password: "Password is incorrect" }))
+        } else {
+          setErrors((prev) => ({ ...prev, general: data.err || "Something went wrong" }))
+        }
+        console.log(data);
       } else {
-        setErrors((prev) => ({ ...prev, general: data.err || "Something went wrong" }))
+        console.log(data);
+        updateUser(data)
+        navigate('/profile')
       }
-      console.log(data);
-    } else {
-      console.log(data);
-      updateUser(data)
-      navigate('/profile')
-
+    } catch {
+      setErrors((prev) => ({ ...prev, general: "Unable to log in right now. Please try again." }))
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -162,12 +171,13 @@ function Login() {
             <button
               type="button"
               onClick={fillDummyData}
+              disabled={isSubmitting}
               className="mb-6 flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-muted/50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
             >
               <span aria-hidden="true">⚡</span> Auto-fill test account
             </button>
 
-            <form className="space-y-5" noValidate onSubmit={handleSubmit}>
+            <form className="space-y-5" noValidate onSubmit={handleSubmit} aria-busy={isSubmitting}>
           <div>
             <label htmlFor="login-email" className="mb-2 block text-sm font-medium text-text-main">
               Email address
@@ -181,6 +191,7 @@ function Login() {
               value={form.email}
               onChange={handleChange}
               onBlur={handleBlur}
+              disabled={isSubmitting}
               aria-invalid={Boolean(errors.email)}
               aria-describedby={errors.email ? "login-email-error" : undefined}
               className={inputClassName("email")}
@@ -207,6 +218,7 @@ function Login() {
                 value={form.password}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                disabled={isSubmitting}
                 aria-invalid={Boolean(errors.password)}
                 aria-describedby={errors.password ? "login-password-error" : undefined}
                 className={`${inputClassName("password")} pr-12`}
@@ -215,6 +227,7 @@ function Login() {
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => setShowPassword((visible) => !visible)}
+                disabled={isSubmitting}
                 className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-md text-text-muted transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
@@ -226,9 +239,10 @@ function Login() {
 
               <button
                 type="submit"
-                className="w-full rounded-md bg-primary px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+                disabled={isSubmitting}
+                className="w-full rounded-md bg-primary px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                Log in
+                {isSubmitting ? "Logging in…" : "Log in"}
               </button>
             </form>
 

@@ -4,6 +4,7 @@ const session = require("express-session");
 
 const productRoute = require("./routes/products/productsRoute");
 const userRoute = require("./routes/users/userRoute");
+const orderRoute = require("./routes/order/orderRoute");
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use(session({
 
 app.use('/api/products', productRoute)
 app.use('/api/user', userRoute)
+app.use('/api/order', orderRoute)
 
 app.get("/api/products", async (req, res) => {
     res.json({ message: "success" })

@@ -96,9 +96,9 @@ function Cart() {
               <span className="text-lg">Subtotal</span>
               <span className="text-xl">{formatPrice(cartTotal)}</span>
             </div>
-            <button type="button" disabled className="flex min-h-14 w-full cursor-not-allowed items-center justify-center rounded-xl bg-surface-muted px-6 font-bold text-text-muted">
-              Checkout coming soon
-            </button>
+            <Link to="/checkout" className="flex min-h-14 w-full items-center justify-center rounded-xl bg-primary px-6 font-bold text-text-light transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25">
+              Proceed to checkout
+            </Link>
           </aside>
         </div>
       )}
