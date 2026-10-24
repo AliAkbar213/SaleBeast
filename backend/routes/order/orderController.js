@@ -16,7 +16,12 @@ const GetOrders = async (req, res) => {
 }
 
 const PlaceOrder = async (req, res) => {
-    const { user_id, cart_arr, address } = req.body
+    const { user_id, cart_arr, address, area_id } = req.body
+
+    const areaId = Number.parseInt(area_id, 10)
+    if (!Number.isSafeInteger(areaId) || areaId <= 0) {
+        return res.status(400).json({ err: "A valid area_id is required" })
+    }
 
     let total = 0
     let itemsInfo = []
@@ -43,9 +48,24 @@ const PlaceOrder = async (req, res) => {
         connection = await pool.connect()
         await connection.query("BEGIN")
 
+        const { rows: areaRows } = await connection.query(`
+            SELECT COALESCE(area.delivery_charge_override, governorate.delivery_charge, 0) AS delivery_charge
+            FROM area
+            JOIN governorate ON governorate.id = area.governorate_id
+            WHERE area.id = $1
+        `, [areaId])
+
+        if (areaRows.length === 0) {
+            await connection.query("ROLLBACK")
+            return res.status(404).json({ err: "Area not found" })
+        }
+
+        const deliveryCharge = Number(areaRows[0].delivery_charge)
+        const orderTotal = (total + (deliveryCharge * 1000)) / 1000
+
         const { rows } = await connection.query(
-            "INSERT INTO orders (user_id, total) VALUES ($1, $2) RETURNING id",
-            [user_id, total / 1000]
+            "INSERT INTO orders (user_id, total, area_id, delivery_charge) VALUES ($1, $2, $3, $4) RETURNING id",
+            [user_id, orderTotal, areaId, deliveryCharge]
         )
         const order_id = rows[0].id;
 
@@ -119,7 +139,8 @@ const PlaceOrder = async (req, res) => {
                         </table>
 
                         <h3 style="text-align: right; margin-top: 20px;">
-                            Total: ${Number(total / 1000).toFixed(3)} KD
+                            Delivery charge: ${deliveryCharge.toFixed(3)} KD<br>
+                            Total: ${orderTotal.toFixed(3)} KD
                         </h3>
                         <h3>Delivery Address</h3>
 
