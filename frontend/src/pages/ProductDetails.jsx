@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import useFetch from "../CustomHooks/useFetch";
 import { useCart } from "../contexts/CartContext";
+import ProductMarkdown from "../Components/ProductMarkdown";
 
 function ProductDetails() {
   const { id } = useParams();
@@ -73,7 +74,7 @@ function ProductDetails() {
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
-        <div>
+        <div className="min-w-0">
           <button
             type="button"
             onClick={() => imageUrl && setImageOpen(true)}
@@ -95,7 +96,7 @@ function ProductDetails() {
           {imageUrl && <p className="mt-3 text-center text-xs text-text-muted">Click the image for a closer look</p>}
         </div>
 
-        <section className="flex flex-col justify-center" aria-labelledby="product-title">
+        <section className="flex min-w-0 flex-col justify-center" aria-labelledby="product-title">
           {product.category && (
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-primary">{product.category}</p>
           )}
@@ -106,10 +107,10 @@ function ProductDetails() {
             {product.price} <span className="text-lg font-semibold text-text-muted">KD</span>
           </p>
 
-          {(product.desc || product.description) && (
+          {product.key_features?.trim() && (
             <div className="mt-8 border-t border-border pt-7">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-text-main">About this product</h2>
-              <p className="mt-3 whitespace-pre-line leading-7 text-text-muted">{product.desc || product.description}</p>
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-text-main">Key features</h2>
+              <ProductMarkdown>{product.key_features}</ProductMarkdown>
             </div>
           )}
 
@@ -146,6 +147,13 @@ function ProductDetails() {
           </div>
         </section>
       </div>
+
+      {(product.desc || product.description)?.trim() && (
+        <section className="mt-12 min-w-0 border-t border-border pt-8 sm:mt-16" aria-labelledby="product-description-title">
+          <h2 id="product-description-title" className="mb-6 text-xl font-bold text-text-main">Product description</h2>
+          <ProductMarkdown>{product.desc || product.description}</ProductMarkdown>
+        </section>
+      )}
 
       {imageOpen && imageUrl && (
         <div

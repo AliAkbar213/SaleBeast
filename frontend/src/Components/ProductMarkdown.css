@@ -1,0 +1,112 @@
+.product-markdown {
+  min-width: 0;
+  color: var(--color-text-main);
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.product-markdown > * + * {
+  margin-top: 1rem;
+}
+
+.product-markdown :is(h1, h2, h3, h4, h5, h6) {
+  margin-top: 1.75rem;
+  color: var(--color-text-main);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.product-markdown h1 { font-size: 1.75rem; }
+.product-markdown h2 { font-size: 1.5rem; }
+.product-markdown h3 { font-size: 1.25rem; }
+.product-markdown :is(h4, h5, h6) { font-size: 1.125rem; }
+.product-markdown > :first-child { margin-top: 0; }
+
+.product-markdown strong {
+  color: var(--color-text-main);
+  font-weight: 700;
+}
+
+.product-markdown ul {
+  list-style: disc;
+  padding-inline-start: 1.5rem;
+}
+
+.product-markdown ol {
+  list-style: decimal;
+  padding-inline-start: 1.5rem;
+}
+
+.product-markdown li + li,
+.product-markdown li > :is(p, ul, ol) {
+  margin-top: 0.5rem;
+}
+
+.product-markdown a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.product-markdown blockquote {
+  border-inline-start: 3px solid var(--color-primary);
+  padding-inline-start: 1rem;
+  font-style: italic;
+}
+
+.product-markdown hr {
+  margin-block: 1.5rem;
+  border-color: var(--color-border);
+}
+
+.product-markdown code {
+  border-radius: 0.25rem;
+  background: var(--color-surface-muted);
+  padding: 0.125rem 0.25rem;
+  font-size: 0.875em;
+}
+
+.product-markdown pre {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  background: var(--color-surface-muted);
+  padding: 1rem;
+}
+
+.product-markdown pre code {
+  padding: 0;
+}
+
+.product-markdown-table {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+}
+
+.product-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.product-markdown :is(th, td) {
+  min-width: 9rem;
+  padding: 0.75rem 1rem;
+  text-align: start;
+  vertical-align: top;
+}
+
+.product-markdown th {
+  background: var(--color-surface-muted);
+  color: var(--color-text-main);
+  font-weight: 700;
+}
+
+.product-markdown tbody tr {
+  border-top: 1px solid var(--color-border);
+}
+
+.product-markdown tbody tr:nth-child(even) {
+  background: var(--color-surface);
+}

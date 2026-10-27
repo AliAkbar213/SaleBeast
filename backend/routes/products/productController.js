@@ -46,6 +46,7 @@ const GetProductDetails = async (req, res) => {
             products.id,
             products.name,
             products.desc,
+            products.key_features,
             products.price,
             products.stock,
             products.image,
