@@ -2,6 +2,7 @@ import { Link, useSearchParams } from "react-router";
 import { useEffect, useState } from "react";
 import useFetch from "../CustomHooks/useFetch"
 import { useCart } from "../contexts/CartContext"
+import ProductPrice from "../Components/ProductPrice"
 
 function Products() {
   const { addToCart, updateQuantity, getItemQuantity, cartCount } = useCart()
@@ -243,7 +244,7 @@ function Products() {
 
                       <div>
                         <p className={`text-sm font-semibold sm:text-base ${outOfStock ? "text-text-muted" : "text-text-main"}`}>
-                          {item.price} KD
+                          <ProductPrice price={item.price} discountedPrice={item.discounted_price} />
                         </p>
                         {outOfStock && (
                           <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-700">

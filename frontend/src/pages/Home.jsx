@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import useFetch from "../CustomHooks/useFetch";
 import { useCart } from "../contexts/CartContext";
+import ProductPrice from "../Components/ProductPrice";
 import "./Home.css";
 
 const priceLabel = (price) => `${Number(price).toFixed(3)} KD`;
@@ -50,7 +51,7 @@ function FeaturedCarousel({ products }) {
         <div className="store-feature-copy" aria-live="polite" aria-atomic="true">
           <p className="store-kicker"><span /> Featured product</p>
           <h1>{product.name}</h1>
-          <p className="store-feature-price">{priceLabel(product.price)}</p>
+          <p className="store-feature-price"><ProductPrice price={product.price} discountedPrice={product.discounted_price} formatPrice={priceLabel} /></p>
           <p className={`store-stock ${isSoldOut(product) ? "sold-out" : ""}`}>{isSoldOut(product) ? "Currently out of stock" : product.stock != null ? "In stock" : "View availability"}</p>
           <Link className="store-shop-button" to={`/products/${product.id}`}>View product <Arrow /></Link>
         </div>
@@ -115,7 +116,7 @@ export default function Home() {
                 </Link>
                 <div className="store-card-details">
                   <h3><Link to={`/products/${product.id}`}>{product.name}</Link></h3>
-                  <p className="store-card-price">{priceLabel(product.price)}</p>
+                  <p className="store-card-price"><ProductPrice price={product.price} discountedPrice={product.discounted_price} formatPrice={priceLabel} /></p>
                   <CartButton product={product} />
                 </div>
               </article>

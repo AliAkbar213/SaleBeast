@@ -1,5 +1,7 @@
 import { Link } from "react-router";
 import { useCart } from "../contexts/CartContext";
+import { getProductPrice } from "../utils/productPrice";
+import ProductPrice from "../Components/ProductPrice";
 
 const formatPrice = (amount) => `${Number(amount || 0).toFixed(3)} KD`;
 
@@ -61,7 +63,7 @@ function Cart() {
                     <div>
                       {item.category && <p className="mb-1 text-xs font-bold uppercase tracking-wider text-primary">{item.category}</p>}
                       <Link to={`/products/${item.id}`} className="line-clamp-2 font-bold leading-snug text-text-main hover:text-primary sm:text-lg">{item.name}</Link>
-                      <p className="mt-2 text-sm text-text-muted">{formatPrice(item.price)} each</p>
+                      <p className="mt-2 text-sm text-text-muted"><ProductPrice price={item.price} discountedPrice={item.discounted_price} formatPrice={formatPrice} /> each</p>
                     </div>
 
                     <div className="flex flex-wrap items-end justify-between gap-3">
@@ -73,7 +75,7 @@ function Cart() {
                         </div>
                         <button type="button" onClick={() => removeFromCart(item.id)} className="text-xs font-semibold text-text-muted underline underline-offset-4 hover:text-primary">Remove</button>
                       </div>
-                      <p className="font-bold text-text-main sm:text-lg">{formatPrice(Number(item.price) * quantity)}</p>
+                      <p className="font-bold text-text-main sm:text-lg">{formatPrice(getProductPrice(item) * quantity)}</p>
                     </div>
                   </div>
                 </article>

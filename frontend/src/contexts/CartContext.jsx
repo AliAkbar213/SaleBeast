@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react"
+import { getProductPrice } from "../utils/productPrice"
 
 const CartContext = createContext(null)
 
@@ -19,7 +20,7 @@ export function CartProvider({ children }) {
       if (existing) {
         return prev.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, ...product, quantity: item.quantity + 1 }
             : item
         )
       }
@@ -50,9 +51,9 @@ export function CartProvider({ children }) {
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
   const cartTotal = cartItems.reduce(
-    (sum, item) => sum + Number(item.price) * item.quantity,
+    (sum, item) => sum + Math.round(getProductPrice(item) * 1000) * item.quantity,
     0
-  )
+  ) / 1000
 
   const getItemQuantity = (id) => {
     const item = cartItems.find((cartItem) => cartItem.id === id)

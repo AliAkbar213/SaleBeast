@@ -2,12 +2,11 @@ import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { AuthContext } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
+import { getProductPrice } from "../utils/productPrice";
 
 const blocks = Array.from({ length: 20 }, (_, index) => String(index + 1));
-const floors = Array.from({ length: 30 }, (_, index) => String(index + 1));
-const rooms = Array.from({ length: 30 }, (_, index) => String(index + 1));
 const formatPrice = (amount) => `${Number(amount || 0).toFixed(3)} KD`;
-const initialAddress = { governorateId: "", areaId: "", block: "", floor: "", room: "", notes: "" };
+const initialAddress = { governorateId: "", areaId: "", block: "", street: "", mobile: "", notes: "" };
 
 function Checkout() {
   const { cartItems, cartCount, cartTotal, clearCart } = useCart();
@@ -73,7 +72,7 @@ function Checkout() {
     event.preventDefault();
     if (!user) return setError("Please log in before placing your order.");
     if (!cartItems.length) return setError("Your cart is empty. Add an item before placing an order.");
-    if (["governorateId", "areaId", "block", "floor", "room"].some((field) => !address[field])) return setError("Please select your governorate, area, block, floor, and room.");
+    if (["governorateId", "areaId", "block", "street", "mobile"].some((field) => !address[field].trim())) return setError("Please select your governorate, area, and block, and enter your street and mobile number.");
 
     setIsSubmitting(true);
     try {
@@ -85,12 +84,12 @@ function Checkout() {
           user_id: user.id,
           area_id: Number(address.areaId),
           cart_arr: cartItems.map((item) => ({ item_id: item.id, quantity: item.quantity })),
-          // Keys below match the existing order endpoint's delivery-address format.
           address: {
-            street: `${selectedArea.name}, ${selectedGovernorate.name}`,
-            building: `Block ${address.block}`,
-            floor: address.floor,
-            flat: address.room,
+            governorate: selectedGovernorate.name,
+            area: selectedArea.name,
+            block: address.block,
+            street: address.street.trim(),
+            mobile: address.mobile.trim(),
             notes: address.notes.trim(),
           },
         }),
@@ -119,10 +118,17 @@ function Checkout() {
       ) : (
         <form onSubmit={handleSubmit} className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <section className="rounded-2xl border border-border bg-surface p-5 sm:p-7"><h2 className="text-xl font-bold text-text-main">Delivery address</h2><p className="mt-2 text-sm text-text-muted">Select your Kuwait location so we can deliver your order.</p><div className="mt-6 grid gap-5 sm:grid-cols-2"><SelectField id="governorateId" label="Governorate" value={address.governorateId} onChange={updateGovernorate} options={governorates} placeholder={isLoadingGovernorates ? "Loading governorates…" : "Select governorate"} disabled={isLoadingGovernorates} /><SelectField id="areaId" label="Area" value={address.areaId} onChange={updateAddress} options={areas} placeholder={isLoadingAreas ? "Loading areas…" : "Select area"} disabled={!address.governorateId || isLoadingAreas} /><SelectField id="block" label="Block" value={address.block} onChange={updateAddress} options={blocks} placeholder="Select block" /><SelectField id="floor" label="Floor" value={address.floor} onChange={updateAddress} options={floors} placeholder="Select floor" /><SelectField id="room" label="Room / flat" value={address.room} onChange={updateAddress} options={rooms} placeholder="Select room or flat" /></div><div className="mt-5"><label htmlFor="notes" className="mb-2 block text-sm font-semibold text-text-main">Delivery notes <span className="font-normal text-text-muted">(optional)</span></label><textarea id="notes" name="notes" value={address.notes} onChange={updateAddress} rows="4" placeholder="Landmark, entrance instructions, or anything that will help the driver." className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/10" /></div></section>
+            <section className="rounded-2xl border border-border bg-surface p-5 sm:p-7"><h2 className="text-xl font-bold text-text-main">Delivery address</h2><p className="mt-2 text-sm text-text-muted">Select your Kuwait location so we can deliver your order.</p><div className="mt-6 grid gap-5 sm:grid-cols-2"><SelectField id="governorateId" label="Governorate" value={address.governorateId} onChange={updateGovernorate} options={governorates} placeholder={isLoadingGovernorates ? "Loading governorates…" : "Select governorate"} disabled={isLoadingGovernorates} /><SelectField id="areaId" label="Area" value={address.areaId} onChange={updateAddress} options={areas} placeholder={isLoadingAreas ? "Loading areas…" : "Select area"} disabled={!address.governorateId || isLoadingAreas} /><SelectField id="block" label="Block" value={address.block} onChange={updateAddress} options={blocks} placeholder="Select block" /><div>
+                <label htmlFor="street" className="mb-2 block text-sm font-semibold text-text-main">Street</label>
+                <input id="street" name="street" type="text" autoComplete="address-line1" value={address.street} onChange={updateAddress} required placeholder="Enter your street" className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              </div>
+              <div>
+                <label htmlFor="mobile" className="mb-2 block text-sm font-semibold text-text-main">Mobile number</label>
+                <input id="mobile" name="mobile" type="tel" autoComplete="tel" value={address.mobile} onChange={updateAddress} required placeholder="Enter your mobile number" className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              </div></div><div className="mt-5"><label htmlFor="notes" className="mb-2 block text-sm font-semibold text-text-main">Delivery notes <span className="font-normal text-text-muted">(optional)</span></label><textarea id="notes" name="notes" value={address.notes} onChange={updateAddress} rows="4" placeholder="Landmark, entrance instructions, or anything that will help the driver." className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/10" /></div></section>
             <section className="rounded-2xl border border-border bg-surface p-5 sm:p-7"><h2 className="text-xl font-bold text-text-main">Payment method</h2><div className="mt-5 space-y-3"><label className="flex cursor-pointer items-center gap-3 rounded-xl border border-primary bg-primary-soft px-4 py-4 text-sm font-semibold text-text-main"><input type="radio" name="payment" value="cash-on-delivery" defaultChecked className="size-4 accent-primary" /><span className="flex-1">Cash on delivery</span><span className="text-xs font-bold uppercase tracking-wide text-primary">Available</span></label><label className="flex cursor-not-allowed items-center gap-3 rounded-xl border border-border bg-surface-muted px-4 py-4 text-sm font-semibold text-text-muted"><input type="radio" name="payment" value="online" disabled className="size-4" /><span className="flex-1">Online payment</span><span className="text-xs font-bold uppercase tracking-wide">Unavailable</span></label></div></section>
           </div>
-          <aside aria-labelledby="order-summary" className="rounded-2xl border border-border bg-surface p-6 lg:sticky lg:top-24"><h2 id="order-summary" className="text-xl font-bold text-text-main">Your order</h2><div className="mt-6 space-y-4 border-b border-border pb-6">{cartItems.map((item) => <div key={item.id} className="flex items-start justify-between gap-4 text-sm"><p className="min-w-0 text-text-muted"><span className="font-semibold text-text-main">{item.quantity}×</span> {item.name}</p><p className="shrink-0 font-semibold text-text-main">{formatPrice(Number(item.price) * item.quantity)}</p></div>)}</div><div className="space-y-3 border-b border-border py-6 text-sm"><div className="flex justify-between gap-4 text-text-muted"><span>Subtotal ({cartCount} {cartCount === 1 ? "item" : "items"})</span><span className="font-semibold text-text-main">{formatPrice(cartTotal)}</span></div><div className="flex justify-between gap-4 text-text-muted"><span>Delivery</span><span className="font-semibold text-text-main">{selectedArea ? formatPrice(deliveryCharge) : "Select an area"}</span></div></div><div className="flex items-center justify-between gap-4 py-6 font-bold text-text-main"><span className="text-lg">Total</span><span className="text-xl">{formatPrice(orderTotal)}</span></div>{error && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">{error}</p>}{!user && <p className="mb-4 text-sm leading-6 text-text-muted">Already have an account? <Link to="/login" className="font-bold text-primary hover:underline">Log in</Link> to place your order.</p>}<button type="submit" disabled={isSubmitting} className="flex min-h-14 w-full items-center justify-center rounded-xl bg-primary px-6 font-bold text-text-light transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? "Placing order…" : "Place order"}</button><button type="button" onClick={() => navigate("/cart")} className="mt-3 w-full text-sm font-semibold text-text-muted hover:text-primary">Return to cart</button></aside>
+          <aside aria-labelledby="order-summary" className="rounded-2xl border border-border bg-surface p-6 lg:sticky lg:top-24"><h2 id="order-summary" className="text-xl font-bold text-text-main">Your order</h2><div className="mt-6 space-y-4 border-b border-border pb-6">{cartItems.map((item) => <div key={item.id} className="flex items-start justify-between gap-4 text-sm"><p className="min-w-0 text-text-muted"><span className="font-semibold text-text-main">{item.quantity}×</span> {item.name}</p><p className="shrink-0 font-semibold text-text-main">{formatPrice(getProductPrice(item) * item.quantity)}</p></div>)}</div><div className="space-y-3 border-b border-border py-6 text-sm"><div className="flex justify-between gap-4 text-text-muted"><span>Subtotal ({cartCount} {cartCount === 1 ? "item" : "items"})</span><span className="font-semibold text-text-main">{formatPrice(cartTotal)}</span></div><div className="flex justify-between gap-4 text-text-muted"><span>Delivery</span><span className="font-semibold text-text-main">{selectedArea ? formatPrice(deliveryCharge) : "Select an area"}</span></div></div><div className="flex items-center justify-between gap-4 py-6 font-bold text-text-main"><span className="text-lg">Total</span><span className="text-xl">{formatPrice(orderTotal)}</span></div>{error && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">{error}</p>}{!user && <p className="mb-4 text-sm leading-6 text-text-muted">Already have an account? <Link to="/login" className="font-bold text-primary hover:underline">Log in</Link> to place your order.</p>}<button type="submit" disabled={isSubmitting} className="flex min-h-14 w-full items-center justify-center rounded-xl bg-primary px-6 font-bold text-text-light transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? "Placing order…" : "Place order"}</button><button type="button" onClick={() => navigate("/cart")} className="mt-3 w-full text-sm font-semibold text-text-muted hover:text-primary">Return to cart</button></aside>
         </form>
       )}
     </main>

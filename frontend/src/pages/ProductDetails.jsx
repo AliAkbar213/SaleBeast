@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router";
 import useFetch from "../CustomHooks/useFetch";
 import { useCart } from "../contexts/CartContext";
 import ProductMarkdown from "../Components/ProductMarkdown";
+import ProductPrice from "../Components/ProductPrice";
 
 function ProductDetails() {
   const { id } = useParams();
@@ -104,7 +105,7 @@ function ProductDetails() {
             {product.name}
           </h1>
           <p className="mt-5 text-3xl font-bold text-text-main">
-            {product.price} <span className="text-lg font-semibold text-text-muted">KD</span>
+            <ProductPrice price={product.price} discountedPrice={product.discounted_price} />
           </p>
 
           {product.key_features?.trim() && (
