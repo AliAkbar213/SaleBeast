@@ -1,4 +1,7 @@
 .store-home { background: #faf9f6; }
+.store-whatsapp { position: fixed; right: max(24px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); z-index: 100; display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; background: #25d366; color: white; box-shadow: 0 4px 16px #0003; transition: background .2s, transform .2s; }
+.store-whatsapp:hover { background: #128c7e; transform: translateY(-2px); }
+.store-whatsapp:focus-visible { outline: 3px solid #075e54; outline-offset: 4px; }
 .store-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px 0; }
 .store-all-link, .store-section-heading > a, .store-footer a:last-child { display: inline-flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 650; }
 .store-search { display: flex; align-items: center; width: min(100%, 480px); gap: 12px; border: 1px solid #ded9d5; border-radius: 8px; background: white; padding: 5px 5px 5px 16px; }

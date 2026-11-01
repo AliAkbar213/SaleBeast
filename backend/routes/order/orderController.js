@@ -37,9 +37,10 @@ const PlaceOrder = async (req, res) => {
                 err: `Product ${item.item_id} not found`
             })
         }
-        const info = { ...row, quantity: item.quantity }
+        const purchasePrice = row.discounted_price ?? row.price
+        const info = { ...row, purchase_price: purchasePrice, quantity: item.quantity }
         itemsInfo.push(info)
-        total += (row.price * 1000) * item.quantity
+        total += Math.round(Number(purchasePrice) * 1000) * item.quantity
     }
 
     let connection
@@ -74,7 +75,7 @@ const PlaceOrder = async (req, res) => {
             console.log(item);
             const { rows } = await connection.query(
                 "INSERT INTO order_items (order_id, product_id, purchase_price, quantity) VALUES ($1, $2, $3, $4)",
-                [order_id, item.id, item.price, item.quantity]
+                [order_id, item.id, item.purchase_price, item.quantity]
             )
         }
         await connection.query("COMMIT");
@@ -82,7 +83,7 @@ const PlaceOrder = async (req, res) => {
         // Send order email
         try {
             const itemsHtml = itemsInfo.map(item => {
-                const itemTotal = Number(item.price) * item.quantity;
+                const itemTotal = Number(item.purchase_price) * item.quantity;
 
                 return `
             <tr>
@@ -93,7 +94,7 @@ const PlaceOrder = async (req, res) => {
                     ${item.quantity}
                 </td>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">
-                    ${Number(item.price).toFixed(3)} KD
+                    ${Number(item.purchase_price).toFixed(3)} KD
                 </td>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">
                     ${itemTotal.toFixed(3)} KD
@@ -145,10 +146,11 @@ const PlaceOrder = async (req, res) => {
                         <h3>Delivery Address</h3>
 
                         <p>
+                            <strong>Governorate:</strong> ${address.governorate}<br>
+                            <strong>Area:</strong> ${address.area}<br>
+                            <strong>Block:</strong> ${address.block}<br>
                             <strong>Street:</strong> ${address.street}<br>
-                            <strong>Building:</strong> ${address.building}<br>
-                            <strong>Floor:</strong> ${address.floor}<br>
-                            <strong>Flat:</strong> ${address.flat}<br>
+                            <strong>Mobile number:</strong> ${address.mobile}<br>
                             <strong>Notes:</strong> ${address.notes || "None"}
                         </p>
 

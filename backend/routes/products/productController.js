@@ -1,7 +1,7 @@
 const pool = require("../../dbConnection")
 
 const GetAllProducts = async (req, res) => {
-    let query = `SELECT id, name, price, stock, image FROM products`
+    let query = `SELECT id, name, price, discounted_price, stock, image FROM products`
     const params = []
     const conditions = []
 
@@ -48,6 +48,7 @@ const GetProductDetails = async (req, res) => {
             products.desc,
             products.key_features,
             products.price,
+            products.discounted_price,
             products.stock,
             products.image,
             categories.name AS category
@@ -87,7 +88,7 @@ const GetCategories = async (req, res) => {
 }
 
 const GetProductByCategory = async (req, res) => {
-    query = `SELECT products.id, products.name, price, brands.name as brand, created_at
+    query = `SELECT products.id, products.name, price, products.discounted_price, brands.name as brand, created_at
             FROM products JOIN brands ON products.brand_id = brands.id JOIN categories ON products.category_id = categories.id`
 
     // if (req.query.q){
