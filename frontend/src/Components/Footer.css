@@ -1,0 +1,17 @@
+.store-footer { border-top: 1px solid #ded9d5; padding: 28px 0; background: #faf9f6; flex-shrink: 0; }
+.store-footer > div { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.store-footer-brand { font-weight: 900; letter-spacing: -.05em; font-size: 20px; }
+.store-footer-brand span { color: #f04416; }
+.store-footer p { color: #746b66; font-size: 12px; }
+.store-footer-socials { display: flex; align-items: center; gap: 10px; }
+.store-footer-socials a { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #ded9d5; border-radius: 50%; color: #514740; background: white; transition: color .2s, border-color .2s, background .2s; }
+.store-footer-socials a:hover { color: #d9360d; border-color: #f04416; background: #fff0e9; }
+.store-footer-socials a:focus-visible { outline: 3px solid #f04416; outline-offset: 3px; }
+.store-footer-cart { display: inline-flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 650; }
+@media (max-width: 600px) {
+  .store-footer > div { flex-wrap: wrap; }
+  .store-footer p { order: 3; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .store-footer-socials a { transition: none; }
+}

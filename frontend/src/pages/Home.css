@@ -3,7 +3,7 @@
 .store-whatsapp:hover { background: #128c7e; transform: translateY(-2px); }
 .store-whatsapp:focus-visible { outline: 3px solid #075e54; outline-offset: 4px; }
 .store-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px 0; }
-.store-all-link, .store-section-heading > a, .store-footer a:last-child { display: inline-flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 650; }
+.store-all-link, .store-section-heading > a { display: inline-flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 650; }
 .store-search { display: flex; align-items: center; width: min(100%, 480px); gap: 12px; border: 1px solid #ded9d5; border-radius: 8px; background: white; padding: 5px 5px 5px 16px; }
 .store-search > svg { flex-shrink: 0; color: #746b66; }
 .store-search input { min-width: 0; width: 100%; padding: 8px 0; font-size: 14px; background: transparent; }
@@ -60,11 +60,6 @@
 .store-add:hover:not(:disabled) { border-color: #f04416; background: #fff0e9; }
 .store-quantity button { min-width: 40px; min-height: 44px; font-size: 18px; }
 .store-quantity span { font-size: 11px; }
-.store-footer { border-top: 1px solid #ded9d5; padding: 28px 0; }
-.store-footer > div { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.store-footer-brand { font-weight: 900; letter-spacing: -.05em; font-size: 20px; }
-.store-footer-brand span { color: #f04416; }
-.store-footer p { color: #746b66; font-size: 12px; }
 .store-loading-feature, .store-message { min-height: 430px; border-radius: 16px; padding: 48px; background: #eee9df; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
 .store-message h1 { font-size: 32px; font-weight: 700; letter-spacing: -.04em; }
 .store-message p { margin-top: 12px; color: #746b66; }
@@ -97,8 +92,6 @@
   .store-card-price { font-size: 15px; }
   .store-add { padding: 8px; }
   .store-products { padding: 32px 0 40px; }
-  .store-footer > div { flex-wrap: wrap; }
-  .store-footer p { order: 3; width: 100%; }
   .store-loading-feature, .store-message { padding: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {

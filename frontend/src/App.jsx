@@ -3,6 +3,7 @@ import Home from "./pages/Home"
 import Products from "./pages/Products"
 import Cart from "./pages/Cart"
 import Navbar from "./Components/Navbar"
+import Footer from "./Components/Footer";
 import ProductDetails from "./pages/ProductDetails";
 import Profile from "./pages/Profile";
 import Signup from "./pages/Signup";
@@ -13,10 +14,11 @@ import { AuthProvider } from "./contexts/AuthContext";
 
 function App() {
   return (
-    <div className="min-h-screen bg-background pt-16 text-text-main">
+    <div className="flex min-h-screen flex-col bg-background pt-16 text-text-main">
       <CartProvider><AuthProvider>
         <BrowserRouter>
           <Navbar />
+          <div className="flex-1">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<Products />} />
@@ -27,6 +29,8 @@ function App() {
             <Route path="/Signup" element={<Signup />} />
             <Route path="/checkout" element={<Checkout />} />
           </Routes>
+          </div>
+          <Footer />
         </BrowserRouter>
       </AuthProvider></CartProvider>
     </div>
