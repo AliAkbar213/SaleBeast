@@ -10,6 +10,7 @@ function ProductDetails() {
   const { addToCart, updateQuantity, getItemQuantity } = useCart();
   const [imageOpen, setImageOpen] = useState(false);
   const [imageMagnified, setImageMagnified] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [reminders, setReminders] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("salebeast-stock-reminders") || "[]");
@@ -48,7 +49,13 @@ function ProductDetails() {
     return <main className="mx-auto max-w-7xl px-4 py-16 text-text-muted sm:px-6">Product not found.</main>;
   }
 
-  const imageUrl = product.image;
+  const imageUrls = [...new Set([
+    product.image,
+    ...(Array.isArray(product.images) ? product.images : []),
+  ].filter((path) => typeof path === "string" && path.trim()))];
+  const imageUrl = selectedImage?.productId === product.id && imageUrls.includes(selectedImage.path)
+    ? selectedImage.path
+    : imageUrls[0];
   const quantity = getItemQuantity(product.id);
   const unavailable = Number(product.stock) === 0;
   const reminderSaved = reminders.includes(String(product.id));
@@ -94,6 +101,25 @@ function ProductDetails() {
               <span>Image unavailable</span>
             )}
           </button>
+          {imageUrls.length > 1 && (
+            <div className="mt-4 flex gap-3 overflow-x-auto pb-2" aria-label="Product images">
+              {imageUrls.map((path, index) => (
+                <button
+                  key={path}
+                  type="button"
+                  onClick={() => {
+                    setSelectedImage({ productId: product.id, path });
+                    setImageMagnified(false);
+                  }}
+                  aria-label={`View image ${index + 1} of ${product.name}`}
+                  aria-pressed={imageUrl === path}
+                  className={`flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-surface p-2 ${imageUrl === path ? "border-primary ring-2 ring-primary" : "border-border"}`}
+                >
+                  <img src={path} alt={`${product.name}, image ${index + 1}`} className="h-full w-full object-contain" />
+                </button>
+              ))}
+            </div>
+          )}
           {imageUrl && <p className="mt-3 text-center text-xs text-text-muted">Click the image for a closer look</p>}
         </div>
 
@@ -187,3 +213,4 @@ function ProductDetails() {
 }
 
 export default ProductDetails;
+
