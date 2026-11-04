@@ -51,6 +51,7 @@ const GetProductDetails = async (req, res) => {
             products.discounted_price,
             products.stock,
             products.image,
+            products.images,
             categories.name AS category
         FROM products
         JOIN categories ON products.category_id = categories.id
