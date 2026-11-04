@@ -1,9 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import useFetch from "../CustomHooks/useFetch";
 import { useCart } from "../contexts/CartContext";
 import ProductMarkdown from "../Components/ProductMarkdown";
 import ProductPrice from "../Components/ProductPrice";
+
+const apiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
+function resolveGalleryImage(path) {
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(path)) return path;
+
+  const relativePath = path.replace(/^\.?\//, "");
+  const imagePath = relativePath.startsWith("images/") ? relativePath : `images/${relativePath}`;
+  return `${apiUrl}/${imagePath}`;
+}
 
 function ProductDetails() {
   const { id } = useParams();
@@ -11,6 +21,8 @@ function ProductDetails() {
   const [imageOpen, setImageOpen] = useState(false);
   const [imageMagnified, setImageMagnified] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const swipeStart = useRef(null);
+  const suppressImageClick = useRef(false);
   const [reminders, setReminders] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("salebeast-stock-reminders") || "[]");
@@ -20,8 +32,22 @@ function ProductDetails() {
     }
   });
 
-  const url = `${import.meta.env.VITE_API_URL}/api/products/${id}`;
+  const url = `${apiUrl}/api/products/${id}`;
   const { data: product, loading, error } = useFetch(url);
+
+  const extraImages = (Array.isArray(product?.images) ? product.images : [])
+    .filter((path) => typeof path === "string" && path.trim())
+    .map((path) => resolveGalleryImage(path.trim()));
+  const imageUrls = [...new Set([product?.image, ...extraImages].filter(Boolean))];
+  const imageUrl = selectedImage?.productId === product?.id && imageUrls.includes(selectedImage?.path)
+    ? selectedImage.path
+    : imageUrls[0];
+
+  const browseImages = (direction) => {
+    const nextIndex = (imageUrls.indexOf(imageUrl) + direction + imageUrls.length) % imageUrls.length;
+    setSelectedImage({ productId: product.id, path: imageUrls[nextIndex] });
+    setImageMagnified(false);
+  };
 
   useEffect(() => {
     if (!imageOpen) return;
@@ -32,7 +58,6 @@ function ProductDetails() {
         setImageMagnified(false);
       }
     };
-
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [imageOpen]);
@@ -49,13 +74,6 @@ function ProductDetails() {
     return <main className="mx-auto max-w-7xl px-4 py-16 text-text-muted sm:px-6">Product not found.</main>;
   }
 
-  const imageUrls = [...new Set([
-    product.image,
-    ...(Array.isArray(product.images) ? product.images : []),
-  ].filter((path) => typeof path === "string" && path.trim()))];
-  const imageUrl = selectedImage?.productId === product.id && imageUrls.includes(selectedImage.path)
-    ? selectedImage.path
-    : imageUrls[0];
   const quantity = getItemQuantity(product.id);
   const unavailable = Number(product.stock) === 0;
   const reminderSaved = reminders.includes(String(product.id));
@@ -72,6 +90,34 @@ function ProductDetails() {
     setImageOpen(false);
     setImageMagnified(false);
   };
+  const swipeHandlers = imageUrls.length > 1 ? {
+    onPointerDown(event) {
+      suppressImageClick.current = false;
+      swipeStart.current = event.pointerType === "touch" && event.isPrimary
+        ? { id: event.pointerId, x: event.clientX, y: event.clientY }
+        : null;
+    },
+    onPointerCancel() {
+      swipeStart.current = null;
+    },
+    onPointerUp(event) {
+      const start = swipeStart.current;
+      swipeStart.current = null;
+      if (start?.id !== event.pointerId) return;
+
+      const dx = event.clientX - start.x;
+      const dy = event.clientY - start.y;
+      if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
+
+      suppressImageClick.current = true;
+      browseImages(dx < 0 ? 1 : -1);
+    },
+    onClickCapture(event) {
+      if (!suppressImageClick.current || event.detail === 0) return;
+      suppressImageClick.current = false;
+      event.stopPropagation();
+    },
+  } : {};
 
   return (
     <main className="mx-auto min-h-[calc(100vh-4rem)] max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
@@ -83,24 +129,27 @@ function ProductDetails() {
 
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
         <div className="min-w-0">
-          <button
-            type="button"
-            onClick={() => imageUrl && setImageOpen(true)}
-            disabled={!imageUrl}
-            aria-label={imageUrl ? `Enlarge image of ${product.name}` : "No product image available"}
-            className="group relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-3xl border border-border bg-surface p-8 text-text-muted sm:p-12"
-          >
-            {imageUrl ? (
-              <>
-                <img src={imageUrl} alt={product.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
-                <span className="absolute bottom-5 right-5 rounded-full border border-border bg-surface/95 px-4 py-2 text-xs font-semibold text-text-main shadow-sm">
-                  Click to zoom
-                </span>
-              </>
-            ) : (
-              <span>Image unavailable</span>
-            )}
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              {...swipeHandlers}
+              onClick={() => imageUrl && setImageOpen(true)}
+              disabled={!imageUrl}
+              aria-label={imageUrl ? `Enlarge image of ${product.name}` : "No product image available"}
+              className="group relative flex aspect-square w-full touch-pan-y touch-pinch-zoom items-center justify-center overflow-hidden rounded-3xl border border-border bg-surface p-8 text-text-muted sm:p-12"
+            >
+              {imageUrl ? (
+                <>
+                  <img src={imageUrl} alt={product.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
+                  <span className="absolute bottom-5 right-5 rounded-full border border-border bg-surface/95 px-4 py-2 text-xs font-semibold text-text-main shadow-sm">
+                    Click to zoom
+                  </span>
+                </>
+              ) : (
+                <span>Image unavailable</span>
+              )}
+            </button>
+          </div>
           {imageUrls.length > 1 && (
             <div className="mt-4 flex gap-3 overflow-x-auto pb-2" aria-label="Product images">
               {imageUrls.map((path, index) => (
@@ -120,7 +169,6 @@ function ProductDetails() {
               ))}
             </div>
           )}
-          {imageUrl && <p className="mt-3 text-center text-xs text-text-muted">Click the image for a closer look</p>}
         </div>
 
         <section className="flex min-w-0 flex-col justify-center" aria-labelledby="product-title">
@@ -194,9 +242,10 @@ function ProductDetails() {
           <div onClick={(event) => event.stopPropagation()} className="flex h-full w-full max-w-5xl items-center justify-center overflow-hidden">
             <button
               type="button"
+              {...swipeHandlers}
               onClick={() => setImageMagnified((value) => !value)}
               aria-label={imageMagnified ? "Zoom out product image" : "Zoom in product image"}
-              className="flex max-h-full max-w-full items-center justify-center"
+              className="flex max-h-full max-w-full touch-pan-y touch-pinch-zoom items-center justify-center"
             >
               <img
                 src={imageUrl}
