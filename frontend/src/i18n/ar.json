@@ -286,5 +286,22 @@
   "Voucher discount": "خصم القسيمة",
   "Please enter a voucher code.": "يرجى إدخال رمز القسيمة.",
   "Invalid voucher code.": "رمز القسيمة غير صالح.",
-  "We could not check your voucher. Please try again.": "تعذر التحقق من القسيمة. يرجى المحاولة مرة أخرى."
+  "We could not check your voucher. Please try again.": "تعذر التحقق من القسيمة. يرجى المحاولة مرة أخرى.",
+  "Order history": "سجل الطلبات",
+  "Your orders": "طلباتك",
+  "View all orders placed with your account, newest first.": "عرض جميع طلبات حسابك، من الأحدث إلى الأقدم.",
+  "Loading your orders…": "جارٍ تحميل طلباتك…",
+  "Please log in again to view your orders.": "يرجى تسجيل الدخول مرة أخرى لعرض طلباتك.",
+  "Unable to load your orders. Please try again.": "تعذر تحميل طلباتك. يرجى المحاولة مرة أخرى.",
+  "No orders yet": "لا توجد طلبات بعد",
+  "Your orders will appear here after checkout.": "ستظهر طلباتك هنا بعد إتمام الشراء.",
+  "Order #{id}": "الطلب رقم {id}",
+  "Status not available": "الحالة غير متوفرة",
+  "Order date": "تاريخ الطلب",
+  "Delivery charge": "رسوم التوصيل",
+  "pending": "قيد الانتظار",
+  "processing": "قيد التجهيز",
+  "shipped": "تم الشحن",
+  "delivered": "تم التوصيل",
+  "cancelled": "ملغي"
 }

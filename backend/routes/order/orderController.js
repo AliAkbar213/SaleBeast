@@ -25,14 +25,21 @@ const ValidateVoucher = async (req, res) => {
 };
 
 const GetOrders = async (req, res) => {
-
+    const userId = req.session?.user?.id;
+    if (!userId) {
+        return res.status(401).json({ err: "Please log in to view your orders." });
+    }
     try {
-        const { rows } = await pool.query("SELECT * FROM orders");
-        console.log(rows);
-        res.json(rows);
+        const { rows } = await pool.query(
+            `SELECT id, total, status, created_at, area_id, delivery_charge
+             FROM public.orders WHERE user_id = $1
+             ORDER BY created_at DESC, id DESC`,
+            [userId]
+        );
+        return res.json(rows);
     } catch (err) {
-        console.log(err);
-        res.json({ "err": err.message })
+        console.error("Failed to fetch customer orders:", err);
+        return res.status(500).json({ err: "Unable to load your orders. Please try again." });
     }
 }
 

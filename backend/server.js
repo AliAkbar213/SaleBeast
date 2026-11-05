@@ -1,6 +1,7 @@
 const express = require("express")
 const cors = require("cors");
 const session = require("express-session");
+const sessionOptions = require("./sessionOptions");
 
 const productRoute = require("./routes/products/productsRoute");
 const userRoute = require("./routes/users/userRoute");
@@ -21,16 +22,7 @@ app.use(cors({
 
 app.use(express.json())
 
-app.use(session({
-    secret: 'test',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        maxAge: 1000 * 60 * 60 * 60 * 24,
-        sameSite: 'none',
-        secure: true
-    }
-}))
+app.use(session(sessionOptions()))
 
 app.use('/api/products', productRoute)
 app.use('/api/user', userRoute)

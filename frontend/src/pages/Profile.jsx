@@ -2,6 +2,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { useContext, useState } from "react"
 import { Link } from "react-router"
 import { AuthContext } from "../contexts/AuthContext"
+import ProfileOrders from "../Components/ProfileOrders"
 
 function Icon({ children, className = "h-5 w-5" }) {
   return (
@@ -91,6 +92,7 @@ function Profile() {
             <button type="button" onClick={handleLogout} disabled={isLoggingOut} className="mt-6 w-full rounded-md border border-border-strong bg-surface px-6 py-3 text-sm font-bold text-text-main transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60">{isLoggingOut ? t("Signing out…") : t("Sign out")}</button>
           </section>
         </div>
+        <ProfileOrders key={user.id} />
       </div>
     </main>
   )
