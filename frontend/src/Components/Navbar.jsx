@@ -1,5 +1,5 @@
 import { useLanguage } from "../contexts/LanguageContext";
-import { NavLink } from "react-router"
+import { Link, NavLink } from "react-router"
 import { useCart } from "../contexts/CartContext"
 import { useContext, useEffect, useState } from "react"
 import { AuthContext } from "../contexts/AuthContext"
@@ -143,10 +143,10 @@ function Navbar() {
         }`}
     >
       <div className="page-container flex h-full items-center justify-between gap-2 sm:gap-3 lg:gap-6">
-        <p dir="ltr" className="flex shrink-0 items-center gap-2 sm:gap-3.5" aria-label="SaleBeast">
+        <Link to="/" dir="ltr" className="flex shrink-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:gap-3.5" aria-label="SaleBeast">
           <img src="/salebeast-mark.png" alt="" className="size-7 rounded-md object-cover sm:size-9" />
-          <span className="hidden text-sm font-bold tracking-[0.06em] min-[420px]:inline lg:text-xl">SALE<span className="text-orange-400">BEAST</span></span>
-        </p>
+          <span className="hidden text-sm font-bold tracking-tight min-[420px]:inline lg:text-xl">SALE<span className="text-orange-400">BEAST</span></span>
+        </Link>
         <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 lg:gap-3 xl:gap-5">
           <NavItem to="/" label={t("Home")} icon={HomeIcon} />
           <NavItem to="/products" label={t("Products")} icon={ProductsIcon} />

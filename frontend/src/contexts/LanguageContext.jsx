@@ -28,7 +28,7 @@ export function LanguageProvider({ children }) {
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
-    document.title = translate(language, "SaleBeast | Electronics for Better Setups");
+    document.title = translate(language, "SaleBeast");
     document.querySelector('meta[name="description"]')?.setAttribute("content", translate(language,
       "SaleBeast electronics — projectors, gamepads, and accessories for better everyday setups."));
     try { localStorage.setItem("salebeast-language", language); } catch { /* Storage may be disabled. */ }

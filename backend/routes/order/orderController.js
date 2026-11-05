@@ -1,7 +1,28 @@
 const pool = require("../../dbConnection")
 const { Resend } = require("resend");
+const { addressEmailHtml } = require("./orderAddress");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+async function findVoucher(database, code) {
+    if (typeof code !== "string" || !code.trim()) {
+        throw Object.assign(new Error("Please enter a voucher code."), { status: 400 });
+    }
+    const { rows } = await database.query("SELECT code, amount FROM public.vouchers WHERE code = $1", [code.trim()]);
+    const voucher = rows[0];
+    if (!voucher || voucher.amount === null || !Number.isFinite(Number(voucher.amount)) || Number(voucher.amount) < 0) {
+        throw Object.assign(new Error("Invalid voucher code."), { status: 400 });
+    }
+    return { code: voucher.code, amount: Math.round(Number(voucher.amount) * 1000) / 1000 };
+}
+
+const ValidateVoucher = async (req, res) => {
+    try {
+        return res.json(await findVoucher(pool, req.body.code));
+    } catch (error) {
+        return res.status(error.status || 500).json({ err: error.status ? error.message : "We could not check your voucher. Please try again." });
+    }
+};
 
 const GetOrders = async (req, res) => {
 
@@ -16,7 +37,14 @@ const GetOrders = async (req, res) => {
 }
 
 const PlaceOrder = async (req, res) => {
-    const { user_id, cart_arr, address, area_id } = req.body
+    const { user_id, cart_arr, address, area_id, voucher_code } = req.body
+
+    let deliveryAddressHtml;
+    try {
+        deliveryAddressHtml = addressEmailHtml(address);
+    } catch (error) {
+        return res.status(400).json({ err: error.message });
+    }
 
     const areaId = Number.parseInt(area_id, 10)
     if (!Number.isSafeInteger(areaId) || areaId <= 0) {
@@ -62,7 +90,12 @@ const PlaceOrder = async (req, res) => {
         }
 
         const deliveryCharge = Number(areaRows[0].delivery_charge)
-        const orderTotal = (total + (deliveryCharge * 1000)) / 1000
+        // Always read the amount from the database again when placing the order.
+        const voucher = voucher_code === undefined || voucher_code === null || voucher_code === ""
+            ? null : await findVoucher(connection, voucher_code)
+        const totalBeforeVoucher = total + Math.round(deliveryCharge * 1000)
+        const voucherDiscount = voucher ? Math.min(totalBeforeVoucher, Math.round(voucher.amount * 1000)) : 0
+        const orderTotal = (totalBeforeVoucher - voucherDiscount) / 1000
 
         const { rows } = await connection.query(
             "INSERT INTO orders (user_id, total, area_id, delivery_charge) VALUES ($1, $2, $3, $4) RETURNING id",
@@ -141,18 +174,12 @@ const PlaceOrder = async (req, res) => {
 
                         <h3 style="text-align: right; margin-top: 20px;">
                             Delivery charge: ${deliveryCharge.toFixed(3)} KD<br>
+                            ${voucher ? `Voucher discount: ${(voucherDiscount / 1000).toFixed(3)} KD<br>` : ""}
                             Total: ${orderTotal.toFixed(3)} KD
                         </h3>
                         <h3>Delivery Address</h3>
 
-                        <p>
-                            <strong>Governorate:</strong> ${address.governorate}<br>
-                            <strong>Area:</strong> ${address.area}<br>
-                            <strong>Block:</strong> ${address.block}<br>
-                            <strong>Street:</strong> ${address.street}<br>
-                            <strong>Mobile number:</strong> ${address.mobile}<br>
-                            <strong>Notes:</strong> ${address.notes || "None"}
-                        </p>
+                        ${deliveryAddressHtml}
 
                         <p style="color: #666;">
                             User ID: ${user_id}
@@ -178,7 +205,7 @@ const PlaceOrder = async (req, res) => {
             await connection.query("ROLLBACK");
         }
         console.error(err);
-        return res.status(500).json({ err: err.message });
+        return res.status(err.status || 500).json({ err: err.message });
     } finally {
         if (connection) {
             connection.release();
@@ -189,5 +216,6 @@ const PlaceOrder = async (req, res) => {
 
 module.exports = {
     GetOrders,
+    ValidateVoucher,
     PlaceOrder
 }

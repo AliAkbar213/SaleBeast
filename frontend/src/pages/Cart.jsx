@@ -10,7 +10,7 @@ import ProductPrice from "../Components/ProductPrice";
 function Cart() {
   const { t, productText, formatPrice, dataName } = useLanguage();
   const { user, isLoading } = useContext(AuthContext);
-  const { cartItems, cartCount, cartTotal, updateQuantity, removeFromCart, clearCart } = useCart();
+  const { cartItems, cartCount, cartTotal, cartFullTotal, cartDiscountTotal, updateQuantity, removeFromCart, clearCart } = useCart();
 
   return (
     <main className="mx-auto min-h-[calc(100vh-4rem)] max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
@@ -93,13 +93,17 @@ function Cart() {
             <h2 id="order-summary" className="text-xl font-bold text-text-main">{t("Order summary")}</h2>
             <div className="mt-7 space-y-4 border-b border-border pb-6 text-sm">
               <div className="flex justify-between gap-4 text-text-muted">
-                <span>{t(cartCount === 1 ? "Subtotal ({count} item)" : "Subtotal ({count} items)", { count: cartCount })}</span>
-                <span className="font-semibold text-text-main">{formatPrice(cartTotal)}</span>
+                <span>{t("Total")}</span>
+                <span className="font-semibold text-text-main">{formatPrice(cartFullTotal)}</span>
+              </div>
+              <div className="flex justify-between gap-4 text-text-muted">
+                <span className="text-green-600">{t("Total discount")}</span>
+                <span className="font-semibold text-green-600">{formatPrice(cartDiscountTotal)}</span>
               </div>
               <p className="text-xs leading-5 text-text-muted">{t("Delivery charges are calculated at checkout.")}</p>
             </div>
             <div className="flex items-center justify-between gap-4 py-6 font-bold text-text-main">
-              <span className="text-lg">{t("Subtotal")}</span>
+              <span className="text-lg">{t("After discount")}</span>
               <span className="text-xl">{formatPrice(cartTotal)}</span>
             </div>
             {isLoading ? (

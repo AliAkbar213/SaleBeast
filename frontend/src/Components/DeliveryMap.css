@@ -1,0 +1,12 @@
+.delivery-map { background: #efedea; }
+.delivery-map-pin span {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid white;
+  border-radius: 50% 50% 50% 0;
+  background: #f04416;
+  box-shadow: 0 2px 6px #0006;
+  transform: rotate(-45deg);
+}
+.delivery-map .leaflet-control-attribution { font-size: 11px; }

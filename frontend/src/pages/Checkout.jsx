@@ -1,19 +1,23 @@
 import { useLanguage } from "../contexts/LanguageContext";
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import { AuthContext } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 import { getProductPrice } from "../utils/productPrice";
+
+import DeliveryMap from "../Components/DeliveryMap";
 
 const blocks = Array.from({ length: 20 }, (_, index) => String(index + 1));
 const initialAddress = { governorateId: "", areaId: "", block: "", street: "", mobile: "", notes: "" };
 
 function Checkout() {
   const { t, productText, formatPrice, errorText } = useLanguage();
-  const { cartItems, cartCount, cartTotal, clearCart } = useCart();
+  const { cartItems, cartTotal, cartFullTotal, cartDiscountTotal, clearCart } = useCart();
   const { user, isLoading } = useContext(AuthContext);
   const navigate = useNavigate();
   const [address, setAddress] = useState(initialAddress);
+  const [location, setLocation] = useState(null);
+  const updateLocation = useCallback((point) => setLocation(point), []);
   const [governorates, setGovernorates] = useState([]);
   const [areas, setAreas] = useState([]);
   const [isLoadingGovernorates, setIsLoadingGovernorates] = useState(true);
@@ -21,11 +25,41 @@ function Checkout() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [voucherCode, setVoucherCode] = useState("");
+  const [voucher, setVoucher] = useState(null);
+  const [voucherError, setVoucherError] = useState("");
+  const [isCheckingVoucher, setIsCheckingVoucher] = useState(false);
   const apiUrl = import.meta.env.VITE_API_URL;
   const selectedGovernorate = governorates.find((governorate) => String(governorate.id) === address.governorateId);
   const selectedArea = areas.find((area) => String(area.id) === address.areaId);
   const deliveryCharge = selectedArea ? Number(selectedArea.delivery_charge) : 0;
-  const orderTotal = Number(cartTotal) + deliveryCharge;
+  const totalBeforeVoucher = Math.round(Number(cartTotal) * 1000) + Math.round(deliveryCharge * 1000);
+  const voucherDiscount = voucher ? Math.min(totalBeforeVoucher, Math.round(voucher.amount * 1000)) : 0;
+  const orderTotal = (totalBeforeVoucher - voucherDiscount) / 1000;
+
+  const applyVoucher = async () => {
+    if (isCheckingVoucher || isSubmitting) return;
+    setVoucher(null);
+    setVoucherError("");
+    if (!voucherCode.trim()) return setVoucherError("Please enter a voucher code.");
+    setIsCheckingVoucher(true);
+    try {
+      const response = await fetch(`${apiUrl}/api/order/voucher`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ code: voucherCode.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.err || "We could not check your voucher. Please try again.");
+      setVoucher(data);
+      setVoucherCode(data.code);
+    } catch (requestError) {
+      setVoucherError(requestError.message || "We could not check your voucher. Please try again.");
+    } finally {
+      setIsCheckingVoucher(false);
+    }
+  };
 
   useEffect(() => {
     if (isLoading || !user) return;
@@ -72,6 +106,7 @@ function Checkout() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (isCheckingVoucher || isSubmitting) return;
     if (!user) return navigate("/cart", { replace: true });
     if (!cartItems.length) return setError("Your cart is empty. Add an item before placing an order.");
     if (["governorateId", "areaId", "block", "street", "mobile"].some((field) => !address[field].trim())) return setError("Please select your governorate, area, and block, and enter your street and mobile number.");
@@ -85,6 +120,7 @@ function Checkout() {
         body: JSON.stringify({
           user_id: user.id,
           area_id: Number(address.areaId),
+          ...(voucher ? { voucher_code: voucher.code } : {}),
           cart_arr: cartItems.map((item) => ({ item_id: item.id, quantity: item.quantity })),
           address: {
             governorate: selectedGovernorate.name,
@@ -93,6 +129,7 @@ function Checkout() {
             street: address.street.trim(),
             mobile: address.mobile.trim(),
             notes: address.notes.trim(),
+            location,
           },
         }),
       });
@@ -133,10 +170,19 @@ function Checkout() {
               <div>
                 <label htmlFor="mobile" className="mb-2 block text-sm font-semibold text-text-main">{t("Mobile number")}</label>
                 <input id="mobile" name="mobile" type="tel" dir="ltr" autoComplete="tel" value={address.mobile} onChange={updateAddress} required placeholder={t("Enter your mobile number")} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/10" />
-              </div></div><div className="mt-5"><label htmlFor="notes" className="mb-2 block text-sm font-semibold text-text-main">{t("Delivery notes")} <span className="font-normal text-text-muted">{t("(optional)")}</span></label><textarea id="notes" name="notes" value={address.notes} onChange={updateAddress} rows="4" placeholder={t("Landmark, entrance instructions, or anything that will help the driver.")} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/10" /></div></section>
+              </div></div><div className="mt-5"><label htmlFor="notes" className="mb-2 block text-sm font-semibold text-text-main">{t("Delivery notes")} <span className="font-normal text-text-muted">{t("(optional)")}</span></label><textarea id="notes" name="notes" value={address.notes} onChange={updateAddress} rows="4" placeholder={t("Landmark, entrance instructions, or anything that will help the driver.")} className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-main outline-none placeholder:text-text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/10" /></div><DeliveryMap value={location} onChange={updateLocation} /></section>
             <section className="rounded-2xl border border-border bg-surface p-5 sm:p-7"><h2 className="text-xl font-bold text-text-main">{t("Payment method")}</h2><div className="mt-5 space-y-3"><label className="flex cursor-pointer items-center gap-3 rounded-xl border border-primary bg-primary-soft px-4 py-4 text-sm font-semibold text-text-main"><input type="radio" name="payment" value="cash-on-delivery" defaultChecked className="size-4 accent-primary" /><span className="flex-1">{t("Cash on delivery")}</span><span className="text-xs font-bold uppercase tracking-wide text-primary">{t("Available")}</span></label><label className="flex cursor-not-allowed items-center gap-3 rounded-xl border border-border bg-surface-muted px-4 py-4 text-sm font-semibold text-text-muted"><input type="radio" name="payment" value="online" disabled className="size-4" /><span className="flex-1">{t("Online payment")}</span><span className="text-xs font-bold uppercase tracking-wide">{t("Unavailable")}</span></label></div></section>
           </div>
-          <aside aria-labelledby="order-summary" className="rounded-2xl border border-border bg-surface p-6 lg:sticky lg:top-24"><h2 id="order-summary" className="text-xl font-bold text-text-main">{t("Your order")}</h2><div className="mt-6 space-y-4 border-b border-border pb-6">{cartItems.map((item) => <div key={item.id} className="flex items-start justify-between gap-4 text-sm"><p className="min-w-0 text-text-muted"><span className="font-semibold text-text-main">{item.quantity}×</span> {productText(item)}</p><p className="shrink-0 font-semibold text-text-main">{formatPrice(getProductPrice(item) * item.quantity)}</p></div>)}</div><div className="space-y-3 border-b border-border py-6 text-sm"><div className="flex justify-between gap-4 text-text-muted"><span>{t(cartCount === 1 ? "Subtotal ({count} item)" : "Subtotal ({count} items)", { count: cartCount })}</span><span className="font-semibold text-text-main">{formatPrice(cartTotal)}</span></div><div className="flex justify-between gap-4 text-text-muted"><span>{t("Delivery")}</span><span className="font-semibold text-text-main">{selectedArea ? formatPrice(deliveryCharge) : t("Select an area")}</span></div></div><div className="flex items-center justify-between gap-4 py-6 font-bold text-text-main"><span className="text-lg">{t("Total")}</span><span className="text-xl">{formatPrice(orderTotal)}</span></div>{error && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">{errorText(error)}</p>}<button type="submit" disabled={isSubmitting} className="flex min-h-14 w-full items-center justify-center rounded-xl bg-primary px-6 font-bold text-text-light transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? t("Placing order…") : t("Place order")}</button><button type="button" onClick={() => navigate("/cart")} className="mt-3 w-full text-sm font-semibold text-text-muted hover:text-primary">{t("Return to cart")}</button></aside>
+          <aside aria-labelledby="order-summary" className="rounded-2xl border border-border bg-surface p-6 lg:sticky lg:top-24"><h2 id="order-summary" className="text-xl font-bold text-text-main">{t("Your order")}</h2><div className="mt-6 space-y-4 border-b border-border pb-6">{cartItems.map((item) => <div key={item.id} className="flex items-start justify-between gap-4 text-sm"><p className="min-w-0 text-text-muted"><span className="font-semibold text-text-main">{item.quantity}×</span> {productText(item)}</p><p className="shrink-0 font-semibold text-text-main">{formatPrice(getProductPrice(item) * item.quantity)}</p></div>)}</div><div className="space-y-3 border-b border-border py-6 text-sm"><div className="flex justify-between gap-4 text-text-muted"><span>{t("Total")}</span><span className="font-semibold text-text-main">{formatPrice(cartFullTotal)}</span></div><div className="flex justify-between gap-4 text-text-muted"><span className="text-green-600">{t("Total discount")}</span><span className="font-semibold text-green-600">{formatPrice(cartDiscountTotal)}</span></div><div className="flex justify-between gap-4 font-bold text-text-main"><span>{t("After discount")}</span><span>{formatPrice(cartTotal)}</span></div><div className="flex justify-between gap-4 text-text-muted"><span>{t("Delivery")}</span><span className="font-semibold text-text-main">{selectedArea ? formatPrice(deliveryCharge) : t("Select an area")}</span></div></div><section className="border-b border-border py-5" aria-label={t("Voucher code")}>
+              <label htmlFor="voucher-code" className="mb-2 block text-sm font-semibold text-text-main">{t("Voucher code")}</label>
+              <div className="flex gap-2">
+                <input id="voucher-code" type="text" dir="ltr" autoComplete="off" value={voucherCode} disabled={isCheckingVoucher || isSubmitting} onChange={(event) => { setVoucherCode(event.target.value); setVoucher(null); setVoucherError(""); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); applyVoucher(); } }} placeholder={t("Enter voucher code")} aria-invalid={Boolean(voucherError)} aria-describedby={voucherError ? "voucher-error" : undefined} className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-3 text-sm text-text-main outline-none focus:border-primary disabled:opacity-60" />
+                <button type="button" onClick={applyVoucher} disabled={isCheckingVoucher || isSubmitting || Boolean(voucher)} className="rounded-xl bg-primary px-4 text-sm font-bold text-text-light hover:bg-primary-hover disabled:opacity-60">{isCheckingVoucher ? t("Checking…") : t("Apply")}</button>
+              </div>
+              {voucherError && <p id="voucher-error" role="alert" className="mt-2 text-sm text-red-600">{errorText(voucherError)}</p>}
+              {voucher && <div className="mt-3 flex items-center justify-between gap-3 text-sm"><p role="status" className="text-green-600">{t("Voucher applied")}</p><button type="button" disabled={isSubmitting} onClick={() => { setVoucher(null); setVoucherCode(""); setVoucherError(""); }} className="font-semibold text-text-muted hover:text-primary">{t("Remove voucher")}</button></div>}
+              {voucher && <div className="mt-3 flex justify-between gap-4 text-sm font-semibold text-green-600"><span>{t("Voucher discount")}</span><span>−{formatPrice(voucherDiscount / 1000)}</span></div>}
+            </section><div className="flex items-center justify-between gap-4 py-6 font-bold text-text-main"><span className="text-lg">{t("Total")}</span><span className="text-xl">{formatPrice(orderTotal)}</span></div>{error && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">{errorText(error)}</p>}<button type="submit" disabled={isSubmitting || isCheckingVoucher} className="flex min-h-14 w-full items-center justify-center rounded-xl bg-primary px-6 font-bold text-text-light transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? t("Placing order…") : t("Place order")}</button><button type="button" onClick={() => navigate("/cart")} className="mt-3 w-full text-sm font-semibold text-text-muted hover:text-primary">{t("Return to cart")}</button></aside>
         </form>
       )}
     </main>

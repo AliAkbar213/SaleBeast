@@ -82,6 +82,12 @@ export function CartProvider({ children }) {
     0
   ) / 1000
 
+  const cartFullTotal = cartItems.reduce(
+    (sum, item) => sum + Math.round(Number(item.price) * 1000) * item.quantity,
+    0
+  ) / 1000
+  const cartDiscountTotal = (Math.round(cartFullTotal * 1000) - Math.round(cartTotal * 1000)) / 1000
+
   const getItemQuantity = (id) => {
     const item = cartItems.find((cartItem) => cartItem.id === id)
     return item ? item.quantity : 0
@@ -97,6 +103,8 @@ export function CartProvider({ children }) {
         clearCart,
         cartCount,
         cartTotal,
+        cartFullTotal,
+        cartDiscountTotal,
         getItemQuantity,
       }}
     >
