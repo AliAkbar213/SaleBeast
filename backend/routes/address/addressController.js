@@ -3,7 +3,7 @@ const pool = require("../../dbConnection")
 const GetGovernorate = async (req, res) => {
     try {
         const { rows } = await pool.query(`
-            SELECT id, name, delivery_charge
+            SELECT id, name, to_jsonb(governorate)->>'ar_name' AS ar_name, delivery_charge
             FROM governorate
             ORDER BY name ASC
         `)
@@ -27,6 +27,7 @@ const GetArea = async (req, res) => {
             SELECT
                 area.id,
                 area.name,
+                to_jsonb(area)->>'ar_name' AS ar_name,
                 area.governorate_id,
                 COALESCE(area.delivery_charge_override, governorate.delivery_charge) AS delivery_charge,
                 area.delivery_charge_override IS NOT NULL AS has_delivery_charge_override

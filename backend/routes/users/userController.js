@@ -18,7 +18,7 @@ const signupSchema = z.object({
     .string({ required_error: "Name is required" })
     .trim()
     .min(1, "Name is Required")
-    .regex(/^[a-zA-Z0-9\s]+$/, "Name cannot contain special characters"),
+    .regex(/^[\p{L}\p{M}\p{N}\s]+$/u, "Name cannot contain special characters"),
   mobile: z
     .string({ required_error: "Phone number is required" })
     .trim()

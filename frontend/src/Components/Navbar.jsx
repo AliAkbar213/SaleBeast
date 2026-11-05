@@ -1,3 +1,4 @@
+import { useLanguage } from "../contexts/LanguageContext";
 import { NavLink } from "react-router"
 import { useCart } from "../contexts/CartContext"
 import { useContext, useEffect, useState } from "react"
@@ -110,6 +111,7 @@ function NavItem({ to, label, icon: Icon, badge }) {
 }
 
 function Navbar() {
+  const { t, language, setLanguage, isArabic } = useLanguage();
   const { cartCount } = useCart()
   const { user } = useContext(AuthContext)
 
@@ -136,34 +138,43 @@ function Navbar() {
 
   return (
     <nav
-      aria-label="Main navigation"
+      aria-label={t("Main navigation")}
       className={`fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/10 bg-brand-dark/95 text-text-light backdrop-blur-xl transition-transform duration-200 ease-out motion-reduce:transition-none ${isVisible ? "translate-y-0" : "-translate-y-full"
         }`}
     >
-      <div className="page-container flex h-full items-center justify-between gap-2 sm:gap-6">
-        <p className="flex shrink-0 items-center gap-2 sm:gap-3.5" aria-label="SaleBeast">
+      <div className="page-container flex h-full items-center justify-between gap-2 sm:gap-3 lg:gap-6">
+        <p dir="ltr" className="flex shrink-0 items-center gap-2 sm:gap-3.5" aria-label="SaleBeast">
           <img src="/salebeast-mark.png" alt="" className="size-7 rounded-md object-cover sm:size-9" />
-          <span className="text-xs font-bold tracking-[0.06em] min-[380px]:text-sm sm:text-xl">SALE<span className="text-orange-400">BEAST</span></span>
+          <span className="hidden text-sm font-bold tracking-[0.06em] min-[420px]:inline lg:text-xl">SALE<span className="text-orange-400">BEAST</span></span>
         </p>
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-3 lg:gap-5">
-          <NavItem to="/" label="Home" icon={HomeIcon} />
-          <NavItem to="/products" label="Products" icon={ProductsIcon} />
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 lg:gap-3 xl:gap-5">
+          <NavItem to="/" label={t("Home")} icon={HomeIcon} />
+          <NavItem to="/products" label={t("Products")} icon={ProductsIcon} />
           <NavItem
             to="/cart"
-            label="Cart"
+            label={t("Cart")}
             icon={CartIcon}
             badge={
               cartCount > 0 && (
                 <span
                   key={cartCount}
-                  className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-brand-dark bg-primary px-1 text-[10px] font-bold text-white"
+                  className="absolute -end-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-brand-dark bg-primary px-1 text-[10px] font-bold text-white"
                 >
                   {cartCount}
                 </span>
               )
             }
           />
-          <NavItem to={user ? "/profile" : "/login"} label="Profile" icon={ProfileIcon} />
+          <NavItem to={user ? "/profile" : "/login"} label={t("Profile")} icon={ProfileIcon} />
+          <button
+            type="button"
+            onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
+            aria-label={t(isArabic ? "Switch to English" : "Switch to Arabic")}
+            lang={isArabic ? "en" : "ar"}
+            className="min-h-11 shrink-0 rounded-md border border-white/20 px-2 text-xs font-semibold text-white transition-colors hover:bg-white/10 sm:px-3 sm:text-sm"
+          >
+            {isArabic ? "EN" : "العربية"}
+          </button>
         </div>
       </div>
     </nav>

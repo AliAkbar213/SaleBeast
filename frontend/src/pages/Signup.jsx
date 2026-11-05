@@ -1,6 +1,7 @@
+import { useLanguage } from "../contexts/LanguageContext";
 import { useState, useContext } from "react"
 import { AuthContext } from "../contexts/AuthContext"
-import { Link, useNavigate } from "react-router"
+import { Link, useLocation, useNavigate } from "react-router"
 import { z } from "zod"
 
 const signupSchema = z.object({
@@ -8,7 +9,7 @@ const signupSchema = z.object({
     .string({ required_error: "Name is required" })
     .trim()
     .min(1, "Name is Required")
-    .regex(/^[a-zA-Z0-9\s]+$/, "Name cannot contain special characters"),
+    .regex(/^[\p{L}\p{M}\p{N}\s]+$/u, "Name cannot contain special characters"),
   mobile: z
     .string({ required_error: "Phone number is required" })
     .trim()
@@ -44,6 +45,7 @@ function EyeIcon({ isVisible }) {
 }
 
 function Signup() {
+  const { t, errorText } = useLanguage();
 
   const fillDummyData = () => {
     setForm({
@@ -64,6 +66,7 @@ function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
   const navigate = useNavigate()
+  const { state } = useLocation()
 
   const url = import.meta.env.VITE_API_URL + "/api/user/signup"
 
@@ -158,7 +161,7 @@ function Signup() {
     } else {
       console.log(data);
       updateUser(data)
-      navigate('/profile')
+      navigate(state?.from === "/checkout" ? "/checkout" : "/profile", { replace: true })
     }
 
   }
@@ -178,96 +181,96 @@ function Signup() {
           <div aria-hidden="true" className="absolute inset-0 opacity-[0.06] bg-[linear-gradient(#fff_1px,transparent_1px),linear-gradient(90deg,#fff_1px,transparent_1px)] bg-size-[48px_48px]" />
           <div className="relative flex h-full flex-col justify-between gap-10">
             <div>
-              <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-orange-400">Join the crew</p>
-              <h1 className="mt-5 text-4xl font-black leading-[1.05] tracking-tighter">Build a better setup.</h1>
-              <p className="mt-5 text-sm leading-6 text-stone-400">Create your SaleBeast account and keep your shopping experience in one place.</p>
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-orange-400">{t("Join the crew")}</p>
+              <h1 className="mt-5 text-4xl font-black leading-[1.05] tracking-tighter">{t("Build a better setup.")}</h1>
+              <p className="mt-5 text-sm leading-6 text-stone-400">{t("Create your SaleBeast account and keep your shopping experience in one place.")}</p>
             </div>
             <div className="space-y-3 border-t border-white/10 pt-6 text-xs font-medium text-stone-400">
-              <p className="flex items-center gap-3"><span className="size-1.5 bg-primary" />Quick and simple registration</p>
-              <p className="flex items-center gap-3"><span className="size-1.5 bg-primary" />Secure member access</p>
+              <p className="flex items-center gap-3"><span className="size-1.5 bg-primary" />{t("Quick and simple registration")}</p>
+              <p className="flex items-center gap-3"><span className="size-1.5 bg-primary" />{t("Secure member access")}</p>
             </div>
           </div>
         </aside>
 
         <div className="p-6 sm:p-10 lg:p-12">
           <div className="mb-7">
-            <p className="eyebrow mb-3">New account</p>
-            <h2 className="text-3xl font-black tracking-[-0.04em]">Create your profile.</h2>
+            <p className="eyebrow mb-3">{t("New account")}</p>
+            <h2 className="text-3xl font-black tracking-[-0.04em]">{t("Create your profile.")}</h2>
           </div>
         <button
           type="button"
           onClick={fillDummyData}
           className="mb-6 flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-muted/50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
         >
-          <span aria-hidden="true">⚡</span> Auto-fill test account
+          <span aria-hidden="true">⚡</span> {t("Auto-fill test account")}
         </button>
 
         {errors.general && (
           <div className="mb-5 w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-            {errors.general}
+            {errorText(errors.general)}
           </div>
         )}
 
         <form className="grid gap-5 sm:grid-cols-2" noValidate onSubmit={handleSubmit}>
           <div className="sm:col-span-2">
             <label htmlFor="signup-name" className="mb-2 block text-sm font-medium text-text-main">
-              Full name
+              {t("Full name")}
             </label>
-            <input id="signup-name" name="name" type="text" autoComplete="name" placeholder="Full name" value={form.name} onChange={handleChange} onBlur={handleBlur} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? "signup-name-error" : undefined} className={inputClassName("name")} />
-            {errors.name && <p id="signup-name-error" className="mt-1 text-sm text-red-600">{errors.name}</p>}
+            <input id="signup-name" name="name" type="text" autoComplete="name" placeholder={t("Full name")} value={form.name} onChange={handleChange} onBlur={handleBlur} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? "signup-name-error" : undefined} className={inputClassName("name")} />
+            {errors.name && <p id="signup-name-error" className="mt-1 text-sm text-red-600">{errorText(errors.name)}</p>}
           </div>
 
           <div>
             <label htmlFor="signup-mobile" className="mb-2 block text-sm font-medium text-text-main">
-              Mobile number
+              {t("Mobile number")}
             </label>
-            <input id="signup-mobile" name="mobile" type="tel" inputMode="numeric" autoComplete="tel" placeholder="8-digit mobile number" value={form.mobile} onChange={handleChange} onBlur={handleBlur} aria-invalid={Boolean(errors.mobile)} aria-describedby={errors.mobile ? "signup-mobile-error" : undefined} className={inputClassName("mobile")} />
-            {errors.mobile && <p id="signup-mobile-error" className="mt-1 text-sm text-red-600">{errors.mobile}</p>}
+            <input id="signup-mobile" name="mobile" type="tel" dir="ltr" inputMode="numeric" autoComplete="tel" placeholder={t("8-digit mobile number")} value={form.mobile} onChange={handleChange} onBlur={handleBlur} aria-invalid={Boolean(errors.mobile)} aria-describedby={errors.mobile ? "signup-mobile-error" : undefined} className={inputClassName("mobile")} />
+            {errors.mobile && <p id="signup-mobile-error" className="mt-1 text-sm text-red-600">{errorText(errors.mobile)}</p>}
           </div>
 
           <div>
             <label htmlFor="signup-email" className="mb-2 block text-sm font-medium text-text-main">
-              Email address
+              {t("Email address")}
             </label>
-            <input id="signup-email" name="email" type="email" autoComplete="email" placeholder="Enter your email" value={form.email} onChange={handleChange} onBlur={handleBlur} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "signup-email-error" : undefined} className={inputClassName("email")} />
-            {errors.email && <p id="signup-email-error" className="mt-1 text-sm text-red-600">{errors.email}</p>}
+            <input id="signup-email" name="email" type="email" dir="ltr" autoComplete="email" placeholder={t("Enter your email")} value={form.email} onChange={handleChange} onBlur={handleBlur} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "signup-email-error" : undefined} className={inputClassName("email")} />
+            {errors.email && <p id="signup-email-error" className="mt-1 text-sm text-red-600">{errorText(errors.email)}</p>}
           </div>
 
           <div>
             <label htmlFor="signup-password" className="mb-2 block text-sm font-medium text-text-main">
-              Password
+              {t("Password")}
             </label>
             <div className="relative">
-              <input id="signup-password" name="password" type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder="At least 8 characters" value={form.password} onChange={handleChange} onBlur={handleBlur} aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "signup-password-error" : undefined} className={`${inputClassName("password")} pr-12`} />
-              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setShowPassword((visible) => !visible)} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-md text-text-muted transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25" aria-label={showPassword ? "Hide password" : "Show password"}>
+              <input id="signup-password" name="password" type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder={t("At least 8 characters")} value={form.password} onChange={handleChange} onBlur={handleBlur} aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "signup-password-error" : undefined} className={`${inputClassName("password")} pe-12`} />
+              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setShowPassword((visible) => !visible)} className="absolute inset-y-0 end-0 flex w-12 items-center justify-center rounded-md text-text-muted transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25" aria-label={showPassword ? t("Hide password") : t("Show password")}>
                 <EyeIcon isVisible={showPassword} />
               </button>
             </div>
-            {errors.password && <p id="signup-password-error" className="mt-1 text-sm text-red-600">{errors.password}</p>}
+            {errors.password && <p id="signup-password-error" className="mt-1 text-sm text-red-600">{errorText(errors.password)}</p>}
           </div>
 
           <div>
             <label htmlFor="signup-confirm-password" className="mb-2 block text-sm font-medium text-text-main">
-              Confirm password
+              {t("Confirm password")}
             </label>
             <div className="relative">
-              <input id="signup-confirm-password" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" placeholder="Re-enter your password" value={form.confirmPassword} onChange={handleChange} onBlur={handleBlur} aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? "signup-confirm-password-error" : undefined} className={`${inputClassName("confirmPassword")} pr-12`} />
-              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-md text-text-muted transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25" aria-label={showConfirmPassword ? "Hide password confirmation" : "Show password confirmation"}>
+              <input id="signup-confirm-password" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" placeholder={t("Re-enter your password")} value={form.confirmPassword} onChange={handleChange} onBlur={handleBlur} aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? "signup-confirm-password-error" : undefined} className={`${inputClassName("confirmPassword")} pe-12`} />
+              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute inset-y-0 end-0 flex w-12 items-center justify-center rounded-md text-text-muted transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25" aria-label={showConfirmPassword ? t("Hide password confirmation") : t("Show password confirmation")}>
                 <EyeIcon isVisible={showConfirmPassword} />
               </button>
             </div>
-            {errors.confirmPassword && <p id="signup-confirm-password-error" className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
+            {errors.confirmPassword && <p id="signup-confirm-password-error" className="mt-1 text-sm text-red-600">{errorText(errors.confirmPassword)}</p>}
           </div>
 
           <button type="submit" className="w-full rounded-md bg-primary px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 sm:col-span-2">
-            Create account
+            {t("Create account")}
           </button>
         </form>
 
         <p className="mt-7 border-t border-border pt-6 text-center text-sm text-text-muted">
-          Already have an account?{" "}
-          <Link to="/Login" className="font-bold text-primary underline-offset-4 hover:underline">
-            Log in
+          {t("Already have an account?")}{" "}
+          <Link to="/Login" state={state?.from === "/checkout" ? { from: "/checkout" } : undefined} className="font-bold text-primary underline-offset-4 hover:underline">
+            {t("Log in")}
           </Link>
         </p>
         </div>

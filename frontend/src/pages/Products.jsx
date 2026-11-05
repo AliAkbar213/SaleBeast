@@ -1,3 +1,4 @@
+import { useLanguage } from "../contexts/LanguageContext";
 import { Link, useSearchParams } from "react-router";
 import { useEffect, useState } from "react";
 import useFetch from "../CustomHooks/useFetch"
@@ -5,6 +6,7 @@ import { useCart } from "../contexts/CartContext"
 import ProductPrice from "../Components/ProductPrice"
 
 function Products() {
+  const { t, productText, dataName } = useLanguage();
   const { addToCart, updateQuantity, getItemQuantity, cartCount } = useCart()
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -90,7 +92,7 @@ function Products() {
   return (
     <div className="mx-auto min-h-[calc(100vh-4rem)] max-w-7xl bg-background px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
       <h1 className="mb-6 text-center text-3xl font-bold tracking-tight text-text-main sm:text-4xl">
-        {query ? `Showing results for: ${query}` : "Products"}
+        {query ? t("Showing results for: {query}", { query }) : t("Products")}
       </h1>
       <form
         onSubmit={handleSearch}
@@ -100,7 +102,7 @@ function Products() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search products..."
+          placeholder={t("Search products...")}
           className="min-w-0 flex-1 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base font-normal text-text-main outline-none transition-colors duration-200 ease-out placeholder:text-text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/10 sm:text-sm"
         />
 
@@ -108,7 +110,7 @@ function Products() {
           type="submit"
           className="shrink-0 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-text-light transition-colors duration-200 ease-out hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
         >
-          Search
+          {t("Search")}
         </button>
       </form>
 
@@ -133,7 +135,7 @@ function Products() {
               : "border-border bg-surface text-text-main hover:border-primary/40 hover:bg-surface-hover"
               }`}
           >
-            All
+            {t("All")}
           </button>
 
           {/* Categories */}
@@ -151,7 +153,7 @@ function Products() {
                 : "border-border bg-surface text-text-main hover:border-primary/40 hover:bg-surface-hover"
                 }`}
             >
-              {cat.name}
+              {dataName(cat)}
             </button>
           ))}
         </div>
@@ -176,7 +178,7 @@ function Products() {
 
       {error && (
         <p className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-600">
-          {typeof error === 'string' ? error : 'Failed to load products.'}
+          {t("Failed to load products.")}
         </p>
       )}
 
@@ -184,10 +186,10 @@ function Products() {
         data.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-lg font-semibold text-text-main">
-              No more products
+              {t("No more products")}
             </p>
             <p className="mt-1 text-sm text-text-muted">
-              There are no products to display on this page.
+              {t("There are no products to display on this page.")}
             </p>
 
             <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -197,7 +199,7 @@ function Products() {
                   onClick={goToPreviousPage}
                   className="rounded-xl border border-border bg-surface px-6 py-3 text-sm font-semibold text-text-main transition-colors duration-200 ease-out hover:border-primary/40 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
                 >
-                  Go to Previous Page
+                  {t("Go to Previous Page")}
                 </button>
               )}
 
@@ -210,7 +212,7 @@ function Products() {
                   }}
                   className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-text-light transition-colors duration-200 ease-out hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
                 >
-                  Clear Search & Filters
+                  {t("Clear Search & Filters")}
                 </button>
               )}
             </div>
@@ -231,7 +233,7 @@ function Products() {
                     <Link to={`/products/${item.id}`}>
                       <div className="relative aspect-square w-full overflow-hidden p-3 sm:aspect-4/3 sm:p-4">{item.image && <img
                         src={item.image}
-                        alt={item.name || "Product image"}
+                        alt={productText(item) || t("Product image")}
                         className={`h-full w-full object-contain transition-transform duration-200 ease-out ${outOfStock ? "opacity-45 grayscale" : "group-hover:scale-[1.02]"}`}
                       />}
                       </div>
@@ -239,7 +241,7 @@ function Products() {
 
                     <div className="flex flex-1 flex-col justify-between gap-3 px-4 pt-4 pb-2">
                       <p className={`line-clamp-2 text-sm font-medium leading-snug sm:text-base ${outOfStock ? "text-text-muted" : "text-text-main"}`}>
-                        {item.name}
+                        {productText(item)}
                       </p>
 
                       <div>
@@ -251,7 +253,7 @@ function Products() {
                             <svg aria-hidden="true" viewBox="0 0 16 16" className="size-3.5 shrink-0 fill-none stroke-current" strokeWidth="2" strokeLinecap="round">
                               <path d="m4 4 8 8M12 4l-8 8" />
                             </svg>
-                            Out of stock
+                            {t("Out of stock")}
                           </p>
                         )}
                       </div>
@@ -263,10 +265,10 @@ function Products() {
                             type="button"
                             disabled={Boolean(reminder)}
                             onClick={() => requestReminder(item.id)}
-                            aria-label={reminder ? `Interest saved for ${item.name || "item"}` : `Notify me when ${item.name || "item"} is available`}
+                            aria-label={t(reminder ? "Interest saved for {name}" : "Notify me when {name} is available", { name: productText(item) || t("Product") })}
                             className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors sm:text-sm ${reminder ? "border-green-300 bg-green-100 text-green-800" : "border-primary bg-primary text-white hover:border-primary-hover hover:bg-primary-hover"}`}
                           >
-                            {reminder ? "✓ Reminder set" : "Notify me"}
+                            {reminder ? t("✓ Reminder set") : t("Notify me")}
                           </button>
                           {/* Temporary test button */}
                           <button
@@ -277,7 +279,7 @@ function Products() {
                             }}
                             className="mb-4 rounded-lg bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-200"
                           >
-                            Reset Reminders State (Dev Only)
+                            {t("Reset Reminders State (Dev Only)")}
                           </button>
                         </div>
                       ) : quantity > 0 ? (
@@ -285,7 +287,7 @@ function Products() {
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, quantity - 1)}
-                            aria-label={`Remove one ${item.name || "item"} from cart`}
+                            aria-label={t("Remove one {name} from cart", { name: productText(item) || t("Product") })}
                             className="flex h-11 w-11 items-center justify-center rounded-full text-base font-semibold text-text-main transition-colors duration-200 hover:bg-secondary-hover"
                           >
                             −
@@ -293,14 +295,14 @@ function Products() {
                           <span
                             key={quantity}
                             className="min-w-5 text-center text-sm font-semibold text-text-main"
-                            aria-label={`${quantity} in cart`}
+                            aria-label={t("{count} in cart", { count: quantity })}
                           >
                             {quantity}
                           </span>
                           <button
                             type="button"
                             onClick={() => addToCart(item)}
-                            aria-label={`Add one ${item.name || "item"} to cart`}
+                            aria-label={t("Add one {name} to cart", { name: productText(item) || t("Product") })}
                             className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-base font-semibold text-text-light transition-colors duration-200 hover:bg-primary-hover active:bg-primary-active"
                           >
                             +
@@ -310,7 +312,7 @@ function Products() {
                         <button
                           type="button"
                           onClick={() => addToCart(item)}
-                          aria-label={`Add ${item.name || "item"} to cart`}
+                          aria-label={t("Add {name} to cart", { name: productText(item) || t("Product") })}
                           className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-xl font-medium text-text-light transition-colors duration-200 hover:bg-primary-hover active:bg-primary-active"
                         >
                           +
@@ -322,18 +324,18 @@ function Products() {
               })}
             </div>
 
-            <nav aria-label="Product pagination" className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <nav aria-label={t("Product pagination")} className="mt-8 flex flex-wrap items-center justify-center gap-3">
               {page != 1 && <button
                 onClick={goToPreviousPage}
                 className="rounded-xl border border-border bg-surface px-6 py-3 text-sm font-semibold text-text-main transition-colors duration-200 ease-out hover:border-primary/40 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-border-subtle disabled:hover:text-text-main"
               >
-                Previous Page
+                {t("Previous Page")}
               </button>}
               <button
                 onClick={goToNextPage}
                 className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-text-light transition-colors duration-200 ease-out hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
               >
-                Next page
+                {t("Next page")}
               </button>
             </nav>
           </>
@@ -342,8 +344,8 @@ function Products() {
 
       <Link
         to="/cart"
-        aria-label={`Open cart${cartCount ? `, ${cartCount} items` : ""}`}
-        className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-text-light shadow-md transition-colors duration-200 hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 sm:bottom-6 sm:right-6"
+        aria-label={cartCount ? t("Open cart, {count} items", { count: cartCount }) : t("Open cart")}
+        className="fixed bottom-4 end-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-text-light shadow-md transition-colors duration-200 hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 sm:bottom-6 sm:end-6"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -359,7 +361,7 @@ function Products() {
         {cartCount > 0 && (
           <span
             key={cartCount}
-            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-background bg-surface px-1 text-[11px] font-semibold text-primary"
+            className="absolute -end-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-background bg-surface px-1 text-[11px] font-semibold text-primary"
           >
             {cartCount}
           </span>

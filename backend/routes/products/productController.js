@@ -1,7 +1,7 @@
 const pool = require("../../dbConnection")
 
 const GetAllProducts = async (req, res) => {
-    let query = `SELECT id, name, price, discounted_price, stock, image FROM products`
+    let query = `SELECT id, name, ar_name, price, discounted_price, stock, image FROM products`
     const params = []
     const conditions = []
 
@@ -9,7 +9,7 @@ const GetAllProducts = async (req, res) => {
 
     if (req.query.q) {
         params.push(`%${req.query.q}%`)
-        conditions.push(`name ILIKE $${params.length}`)
+        conditions.push(`(name ILIKE $${params.length} OR ar_name ILIKE $${params.length})`)
     }
     if (req.query.category) {
         params.push(parseInt(req.query.category, 10));
@@ -45,16 +45,21 @@ const GetProductDetails = async (req, res) => {
         SELECT 
             products.id,
             products.name,
+            products.ar_name,
             products.desc,
+            products.ar_desc,
             products.key_features,
+            products.ar_key_features,
             products.price,
             products.discounted_price,
             products.stock,
             products.image,
             products.images,
-            categories.name AS category
+            products.video,
+            categories.name AS category,
+            to_jsonb(categories)->>'ar_name' AS ar_category
         FROM products
-        JOIN categories ON products.category_id = categories.id
+        LEFT JOIN categories ON products.category_id = categories.id
         WHERE products.id = $1
     `;
 
@@ -89,7 +94,7 @@ const GetCategories = async (req, res) => {
 }
 
 const GetProductByCategory = async (req, res) => {
-    query = `SELECT products.id, products.name, price, products.discounted_price, brands.name as brand, created_at
+    query = `SELECT products.id, products.name, products.ar_name, price, products.discounted_price, brands.name as brand, created_at
             FROM products JOIN brands ON products.brand_id = brands.id JOIN categories ON products.category_id = categories.id`
 
     // if (req.query.q){

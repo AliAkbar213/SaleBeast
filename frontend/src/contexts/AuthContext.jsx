@@ -6,6 +6,7 @@ export const AuthContext = createContext()
 export function AuthProvider({ children }) {
 
   const [user, setUser] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   const url = import.meta.env.VITE_API_URL
 
@@ -17,18 +18,22 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const res = await fetch(`${url}/api/user/profile`, { credentials: "include" })
-      if (!res.ok) {
-        return
+      try {
+        const res = await fetch(`${url}/api/user/profile`, { credentials: "include" })
+        if (!res.ok) return
+        const data = await res.json()
+        updateUser(data)
+      } catch {
+        setUser(null)
+      } finally {
+        setIsLoading(false)
       }
-      const data = await res.json()
-      updateUser(data)
     }
     checkAuth()
   },[url])
 
   return (
-    <AuthContext.Provider value={{ user, updateUser }}>
+    <AuthContext.Provider value={{ user, updateUser, isLoading }}>
       {children}
     </AuthContext.Provider>
   )

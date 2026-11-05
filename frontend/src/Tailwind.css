@@ -12,6 +12,24 @@
   text-rendering: optimizeLegibility;
 }
 
+html[lang="ar"] {
+  --font-display: Tahoma, "Segoe UI", Arial, sans-serif;
+  --font-body: Tahoma, "Segoe UI", Arial, sans-serif;
+  --font-sans: Tahoma, "Segoe UI", Arial, sans-serif;
+}
+
+html[lang="ar"] :is(h1, h2, h3, p, label, button, a, .eyebrow, .store-kicker) {
+  letter-spacing: normal;
+}
+
+html[lang="ar"] :is(h1, h2, h3) {
+  line-height: 1.5;
+}
+
+html[dir="rtl"] .store-footer-cart svg {
+  transform: rotate(180deg);
+}
+
 @theme {
   /* Typography */
   --font-display: "Inter", "Segoe UI", Arial, sans-serif;

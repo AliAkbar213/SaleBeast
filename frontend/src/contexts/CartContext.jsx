@@ -13,6 +13,33 @@ export function CartProvider({ children }) {
     localStorage.setItem("cart", JSON.stringify(cartItems))
   }, [cartItems])
 
+  // Older saved carts predate ar_name. Enrich them without changing prices or quantities.
+  const untranslatedIds = JSON.stringify(cartItems
+    .filter((item) => !Object.hasOwn(item, "ar_name"))
+    .map((item) => item.id));
+  useEffect(() => {
+    const ids = JSON.parse(untranslatedIds);
+    if (!ids.length) return;
+    const controller = new AbortController();
+    const api = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+    Promise.all(ids.map(async (id) => {
+      try {
+        const response = await fetch(`${api}/api/products/${encodeURIComponent(id)}`, {
+          credentials: "include", signal: controller.signal,
+        });
+        if (!response.ok) return null;
+        const product = await response.json();
+        return { id, ar_name: product.ar_name ?? null };
+      } catch { return null; }
+    })).then((products) => {
+      if (controller.signal.aborted) return;
+      const translations = new Map(products.filter(Boolean).map((product) => [product.id, product]));
+      if (translations.size) setCartItems((items) => items.map((item) =>
+        translations.has(item.id) ? { ...item, ar_name: translations.get(item.id).ar_name } : item));
+    });
+    return () => controller.abort();
+  }, [untranslatedIds]);
+
   const addToCart = (product) => {
     setCartItems((prev) => {
       const existing = prev.find((item) => item.id === product.id)

@@ -1,6 +1,7 @@
+import { useLanguage } from "../contexts/LanguageContext";
 import { useContext } from "react"
 import { useState } from "react"
-import { Link, useNavigate } from "react-router"
+import { Link, useLocation, useNavigate } from "react-router"
 import { z } from "zod"
 import { AuthContext } from "../contexts/AuthContext"
 
@@ -31,6 +32,7 @@ function EyeIcon({ isVisible }) {
 }
 
 function Login() {
+  const { t, errorText } = useLanguage();
   const [form, setForm] = useState(initialForm)
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
@@ -38,6 +40,7 @@ function Login() {
 
   const { updateUser } = useContext(AuthContext)
   const navigate = useNavigate()
+  const { state } = useLocation()
 
   const url = import.meta.env.VITE_API_URL + "/api/user/login"
 
@@ -132,7 +135,7 @@ function Login() {
       } else {
         console.log(data);
         updateUser(data)
-        navigate('/profile')
+        navigate(state?.from === "/checkout" ? "/checkout" : "/profile", { replace: true })
       }
     } catch {
       setErrors((prev) => ({ ...prev, general: "Unable to log in right now. Please try again." }))
@@ -151,21 +154,21 @@ function Login() {
     <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-brand-dark text-text-light">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.05] bg-[linear-gradient(#fff_1px,transparent_1px),linear-gradient(90deg,#fff_1px,transparent_1px)] bg-size-[56px_56px]" />
       <div className="page-container relative grid min-h-[calc(100vh-4rem)] items-stretch lg:grid-cols-[0.9fr_1.1fr]">
-        <section className="hidden flex-col justify-between border-r border-white/10 py-16 pr-12 lg:flex">
+        <section className="hidden flex-col justify-between border-e border-white/10 py-16 pe-12 lg:flex">
           <div>
-            <p className="flex items-center gap-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-orange-400"><span className="h-px w-8 bg-primary" />Member access</p>
-            <h1 className="mt-8 max-w-md font-display text-5xl font-black leading-[1.02] tracking-[-0.055em]">Your setup is waiting.</h1>
-            <p className="mt-5 max-w-sm text-base leading-7 text-stone-400">Sign in to get back to the gear, accessories, and upgrades you have been eyeing.</p>
+            <p className="flex items-center gap-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-orange-400"><span className="h-px w-8 bg-primary" />{t("Member access")}</p>
+            <h1 className="mt-8 max-w-md font-display text-5xl font-black leading-[1.02] tracking-[-0.055em]">{t("Your setup is waiting.")}</h1>
+            <p className="mt-5 max-w-sm text-base leading-7 text-stone-400">{t("Sign in to get back to the gear, accessories, and upgrades you have been eyeing.")}</p>
           </div>
-          <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-stone-500">SaleBeast / Secure account</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-stone-500">{t("SaleBeast / Secure account")}</div>
         </section>
 
-        <section className="flex items-center justify-center py-10 sm:py-16 lg:justify-end lg:pl-14">
+        <section className="flex items-center justify-center py-10 sm:py-16 lg:justify-end lg:ps-14">
           <div className="w-full max-w-lg border border-white/10 bg-white p-6 text-text-main shadow-2xl shadow-black/30 sm:p-10">
             <div className="mb-8">
-              <p className="eyebrow mb-3">Welcome back</p>
-              <h2 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">Log in to SaleBeast.</h2>
-              <p className="mt-3 text-sm leading-6 text-text-muted">Enter your details to continue shopping.</p>
+              <p className="eyebrow mb-3">{t("Welcome back")}</p>
+              <h2 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">{t("Log in to SaleBeast.")}</h2>
+              <p className="mt-3 text-sm leading-6 text-text-muted">{t("Enter your details to continue shopping.")}</p>
             </div>
 
             <button
@@ -174,18 +177,19 @@ function Login() {
               disabled={isSubmitting}
               className="mb-6 flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-muted/50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
             >
-              <span aria-hidden="true">⚡</span> Auto-fill test account
+              <span aria-hidden="true">⚡</span> {t("Auto-fill test account")}
             </button>
 
+            {errors.general && <p role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{errorText(errors.general)}</p>}
             <form className="space-y-5" noValidate onSubmit={handleSubmit} aria-busy={isSubmitting}>
           <div>
             <label htmlFor="login-email" className="mb-2 block text-sm font-medium text-text-main">
-              Email address
+              {t("Email address")}
             </label>
             <input
               id="login-email"
               name="email"
-              type="email"
+              type="email" dir="ltr"
               autoComplete="email"
               placeholder="you@example.com"
               value={form.email}
@@ -196,16 +200,16 @@ function Login() {
               aria-describedby={errors.email ? "login-email-error" : undefined}
               className={inputClassName("email")}
             />
-            {errors.email && <p id="login-email-error" className="mt-1 text-sm text-red-600">{errors.email}</p>}
+            {errors.email && <p id="login-email-error" className="mt-1 text-sm text-red-600">{errorText(errors.email)}</p>}
           </div>
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-4">
               <label htmlFor="login-password" className="block text-sm font-medium text-text-main">
-                Password
+                {t("Password")}
               </label>
               <a href="#forgot-password" className="text-xs font-bold text-primary underline-offset-4 hover:underline">
-                Forgot password?
+                {t("Forgot password?")}
               </a>
             </div>
             <div className="relative">
@@ -214,27 +218,27 @@ function Login() {
                 name="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
-                placeholder="Enter your password"
+                placeholder={t("Enter your password")}
                 value={form.password}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 disabled={isSubmitting}
                 aria-invalid={Boolean(errors.password)}
                 aria-describedby={errors.password ? "login-password-error" : undefined}
-                className={`${inputClassName("password")} pr-12`}
+                className={`${inputClassName("password")} pe-12`}
               />
               <button
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => setShowPassword((visible) => !visible)}
                 disabled={isSubmitting}
-                className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-md text-text-muted transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute inset-y-0 end-0 flex w-12 items-center justify-center rounded-md text-text-muted transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+                aria-label={showPassword ? t("Hide password") : t("Show password")}
               >
                 <EyeIcon isVisible={showPassword} />
               </button>
             </div>
-            {errors.password && <p id="login-password-error" className="mt-1 text-sm text-red-600">{errors.password}</p>}
+            {errors.password && <p id="login-password-error" className="mt-1 text-sm text-red-600">{errorText(errors.password)}</p>}
           </div>
 
               <button
@@ -242,14 +246,14 @@ function Login() {
                 disabled={isSubmitting}
                 className="w-full rounded-md bg-primary px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSubmitting ? "Logging in…" : "Log in"}
+                {isSubmitting ? t("Logging in…") : t("Log in")}
               </button>
             </form>
 
             <p className="mt-7 border-t border-border pt-6 text-center text-sm text-text-muted">
-              New to SaleBeast?{" "}
-              <Link to="/Signup" className="font-bold text-primary underline-offset-4 hover:underline">
-                Create an account
+              {t("New to SaleBeast?")}{" "}
+              <Link to="/Signup" state={state?.from === "/checkout" ? { from: "/checkout" } : undefined} className="font-bold text-primary underline-offset-4 hover:underline">
+                {t("Create an account")}
               </Link>
             </p>
           </div>
