@@ -11,7 +11,6 @@ export function AuthProvider({ children }) {
   const url = import.meta.env.VITE_API_URL
 
   const updateUser = (newUser) => {
-    console.log(newUser);
 
     setUser(newUser)
   }

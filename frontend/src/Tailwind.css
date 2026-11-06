@@ -13,9 +13,15 @@
 }
 
 html[lang="ar"] {
-  --font-display: Tahoma, "Segoe UI", Arial, sans-serif;
-  --font-body: Tahoma, "Segoe UI", Arial, sans-serif;
-  --font-sans: Tahoma, "Segoe UI", Arial, sans-serif;
+  --font-display: "Rubik", Tahoma, "Segoe UI", Arial, sans-serif;
+  --font-body: "Rubik", Tahoma, "Segoe UI", Arial, sans-serif;
+  --font-sans: "Rubik", Tahoma, "Segoe UI", Arial, sans-serif;
+  font-family: var(--font-body);
+}
+
+html[lang="ar"] .font-mono,
+[lang="ar"]:not(html) {
+  font-family: "Rubik", Tahoma, "Segoe UI", Arial, sans-serif;
 }
 
 html[lang="ar"] :is(h1, h2, h3, p, label, button, a, .eyebrow, .store-kicker) {

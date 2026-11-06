@@ -49,7 +49,6 @@ const saveSession = (req, res, sessionUser) => {
 
 const loginUser = async (req, res) => {
   const validation = loginSchema.safeParse(req.body)
-  console.log(validation);
 
   if (!validation.success) {
     const errorMsg = validation.error.issues[0].message
@@ -109,7 +108,6 @@ const signupUser = async (req, res) => {
     }
 
     const password_hash = await bcrypt.hash(password, 10)
-    console.log(name, parseInt(mobile), email, password_hash);
 
     const { rows } = await pool.query(
       "INSERT INTO users (name, mobile, email, password_hash) VALUES ($1, $2, $3, $4) RETURNING id",

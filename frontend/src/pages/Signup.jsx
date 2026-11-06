@@ -47,17 +47,6 @@ function EyeIcon({ isVisible }) {
 function Signup() {
   const { t, errorText } = useLanguage();
 
-  const fillDummyData = () => {
-    setForm({
-      name: "John Doe",
-      mobile: "12345678", // Fits your 8-digit Zod regex
-      email: "testuser@gmail.com",
-      password: "Password123", // Meets your min 8 chars + upper + number
-      confirmPassword: "Password123",
-    })
-    setErrors({}) // Clear any existing errors
-  }
-
   const { updateUser } = useContext(AuthContext)
 
   const [form, setForm] = useState(initialForm)
@@ -159,7 +148,6 @@ function Signup() {
         general: data.err,
       }));
     } else {
-      console.log(data);
       updateUser(data)
       navigate(state?.from === "/checkout" ? "/checkout" : "/profile", { replace: true })
     }
@@ -197,14 +185,6 @@ function Signup() {
             <p className="eyebrow mb-3">{t("New account")}</p>
             <h2 className="text-3xl font-black tracking-[-0.04em]">{t("Create your profile.")}</h2>
           </div>
-        <button
-          type="button"
-          onClick={fillDummyData}
-          className="mb-6 flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-muted/50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
-        >
-          <span aria-hidden="true">⚡</span> {t("Auto-fill test account")}
-        </button>
-
         {errors.general && (
           <div className="mb-5 w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
             {errorText(errors.general)}

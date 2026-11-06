@@ -144,8 +144,8 @@ const PlaceOrder = async (req, res) => {
             }).join("");
 
             const { data, error } = await resend.emails.send({
-                from: "onboarding@resend.dev",
-                to: "salebeast.kw@gmail.com",
+                from: "SalesBeast <orders@salebeastkw.com>",
+                to: "aliakbarbhura@gmail.com",
                 subject: `New Order #${order_id}`,
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 700px; margin: auto;">

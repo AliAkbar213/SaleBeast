@@ -44,14 +44,6 @@ function Login() {
 
   const url = import.meta.env.VITE_API_URL + "/api/user/login"
 
-  const fillDummyData = () => {
-    setForm({
-      email: "testuser@gmail.com",
-      password: "Password123",
-    })
-    setErrors({})
-  }
-
   const validate = (values) => {
     const result = loginSchema.safeParse(values)
     const nextErrors = {}
@@ -131,9 +123,7 @@ function Login() {
         } else {
           setErrors((prev) => ({ ...prev, general: data.err || "Something went wrong" }))
         }
-        console.log(data);
       } else {
-        console.log(data);
         updateUser(data)
         navigate(state?.from === "/checkout" ? "/checkout" : "/profile", { replace: true })
       }
@@ -171,15 +161,6 @@ function Login() {
               <p className="mt-3 text-sm leading-6 text-text-muted">{t("Enter your details to continue shopping.")}</p>
             </div>
 
-            <button
-              type="button"
-              onClick={fillDummyData}
-              disabled={isSubmitting}
-              className="mb-6 flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-muted/50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
-            >
-              <span aria-hidden="true">⚡</span> {t("Auto-fill test account")}
-            </button>
-
             {errors.general && <p role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{errorText(errors.general)}</p>}
             <form className="space-y-5" noValidate onSubmit={handleSubmit} aria-busy={isSubmitting}>
           <div>
@@ -208,9 +189,6 @@ function Login() {
               <label htmlFor="login-password" className="block text-sm font-medium text-text-main">
                 {t("Password")}
               </label>
-              <a href="#forgot-password" className="text-xs font-bold text-primary underline-offset-4 hover:underline">
-                {t("Forgot password?")}
-              </a>
             </div>
             <div className="relative">
               <input

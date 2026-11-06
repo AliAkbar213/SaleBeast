@@ -270,17 +270,6 @@ function Products() {
                           >
                             {reminder ? t("✓ Reminder set") : t("Notify me")}
                           </button>
-                          {/* Temporary test button */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              localStorage.removeItem("salebeast-stock-reminders");
-                              setReminders({});
-                            }}
-                            className="mb-4 rounded-lg bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-200"
-                          >
-                            {t("Reset Reminders State (Dev Only)")}
-                          </button>
                         </div>
                       ) : quantity > 0 ? (
                         <div className="flex items-center rounded-full border border-border-subtle bg-secondary p-1">
