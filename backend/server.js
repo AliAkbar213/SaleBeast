@@ -7,6 +7,7 @@ const productRoute = require("./routes/products/productsRoute");
 const userRoute = require("./routes/users/userRoute");
 const orderRoute = require("./routes/order/orderRoute");
 const addressRoute = require("./routes/address/addressRoute");
+const adminRoute = require("./routes/admin/adminRoute");
 
 const app = express();
 
@@ -28,14 +29,13 @@ app.use('/api/products', productRoute)
 app.use('/api/user', userRoute)
 app.use('/api/order', orderRoute)
 app.use('/api/address', addressRoute)
+app.use('/api/admin', adminRoute())
 
 app.get("/api/products", async (req, res) => {
     res.json({ message: "success" })
 })
 
 app.use('/images', express.static('product_images'))
-
-
 
 app.listen(5000, () => {
     console.log("listening on port: 5000");

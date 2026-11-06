@@ -9,6 +9,7 @@ import Profile from "./pages/Profile";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import Checkout from "./pages/Checkout";
+import Admin from "./pages/Admin";
 import { CartProvider } from "./contexts/CartContext"
 import { AuthProvider } from "./contexts/AuthContext";
 
@@ -28,6 +29,7 @@ function App() {
             <Route path="/Login" element={<Login />} />
             <Route path="/Signup" element={<Signup />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/admin" element={<Admin />} />
           </Routes>
           </div>
           <Footer />
