@@ -16,7 +16,9 @@ app.set('trust proxy', 1)
 app.use(cors({
     origin: [
         "http://localhost:5173",
-        "https://salebeast.netlify.app"
+        "https://salebeast.netlify.app",
+        "https://salebeastkw.com",
+        "https://www.salebeastkw.com"
     ],
     credentials: true
 }));
