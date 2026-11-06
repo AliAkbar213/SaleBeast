@@ -40,7 +40,7 @@ test("order email includes the selected pin, a usable Maps link, and all escaped
     assert.equal(context.response.code, 201);
     assert.equal(context.emails.length, 1);
     const email = context.emails[0];
-    assert.equal(email.to, "salebeast.kw@gmail.com");
+    assert.equal(email.to, "aliakbarbhura@gmail.com");
     assert.match(email.html, /29\.3759,47\.9774/);
     assert.match(email.html, /https:\/\/www.google.com\/maps\/search\/\?api=1&amp;query=29\.3759%2C47\.9774/);
     for (const value of ["Capital", "Kuwait City", "Street 5", "12345678", "Entrance &lt;A&gt; &amp; &quot;B&quot;"]) assert.ok(email.html.includes(value));

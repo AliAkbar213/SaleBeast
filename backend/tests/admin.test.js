@@ -5,11 +5,11 @@ const session = require('express-session');
 const bcrypt = require('bcrypt');
 const adminRoute = require('../routes/admin/adminRoute');
 
-async function setup(t, query) {
+async function setup(t, query, { sendEmail = async () => { throw new Error('Unexpected email send'); } } = {}) {
     const app = express();
     app.use(express.json());
     app.use(session({ secret: 'admin-test-secret', resave: false, saveUninitialized: false }));
-    app.use('/api/admin', adminRoute({ query }));
+    app.use('/api/admin', adminRoute({ query }, { sendEmail }));
     const server = app.listen(0, '127.0.0.1');
     await new Promise(resolve => server.once('listening', resolve));
     t.after(() => new Promise(resolve => server.close(resolve)));
@@ -158,20 +158,157 @@ test('admin orders list all users newest first and only permit validated status 
     assert.match(calls.at(-1).sql, /FROM public.orders ORDER BY created_at DESC, id DESC$/);
     assert.ok(!calls.at(-1).sql.includes('WHERE'));
     assert.equal((await request('/orders/2', 'PATCH', { status: 'Delivered' }, false)).status, 403);
-    for (const body of [{}, { status: '' }, { status: ' ' }, { status: null }, { status: 1 }, { status: 'x'.repeat(101) }, { status: 'Delivered', total: '0' }, { user_id: '5' }]) {
+    for (const body of [{}, { status: '' }, { status: ' ' }, { status: null }, { status: 1 }, { status: 'x'.repeat(101) }, { status: 'Delivered', total: '0' }, { user_id: '5' }, { status: 'Out for delivery' }, { status: "Custom'; --" }]) {
         assert.equal((await request('/orders/2', 'PATCH', body)).status, 400);
     }
     for (const id of ['bad', '0', '9223372036854775808']) assert.equal((await request(`/orders/${id}`, 'PATCH', { status: 'Delivered' })).status, 400);
     assert.ok(!calls.some(call => call.sql.startsWith('UPDATE')));
-    const updated = await request('/orders/2', 'PATCH', { status: '  Out for delivery  ' });
+    const updated = await request('/orders/2', 'PATCH', { status: '  Processing  ' });
     assert.equal(updated.status, 200);
-    assert.equal(updated.body.status, 'Out for delivery');
-    assert.match(calls.at(-1).sql, /^UPDATE public.orders SET status = \$1 WHERE id = \$2 RETURNING/);
-    assert.deepEqual(calls.at(-1).params, ['Out for delivery', '2']);
-    assert.equal((await request('/orders/2', 'PATCH', { status: "Custom'; --" })).status, 200);
-    assert.deepEqual(calls.at(-1).params, ["Custom'; --", '2']);
-    assert.ok(!calls.at(-1).sql.includes("Custom'; --"));
+    assert.equal(updated.body.status, 'Processing');
+    assert.match(calls.at(-1).sql, /^UPDATE public.orders SET status = \$1 WHERE id = \$2 AND status IS DISTINCT FROM \$1 RETURNING/);
+    assert.deepEqual(calls.at(-1).params, ['Processing', '2']);
+    for (const status of ['Processing', 'Cancelled']) assert.equal((await request('/orders/2', 'PATCH', { status })).status, 200);
 });
+
+async function setupOrderConfirmation(t, { email = 'customer@example.com', emailFailure, lookupFailure = false,
+    itemLookupFailure = false, items = [
+        { name: 'Cable <Pro> & "Plus"', quantity: 2, purchase_price: '8.125' },
+        { name: 'Charger', quantity: 2, purchase_price: '3.500' },
+    ],
+} = {}) {
+    const password = await bcrypt.hash('secret', 4);
+    const emails = [];
+    const lookups = [];
+    const itemQueries = [];
+    let order = { id: '42', user_id: '7', status: 'Processing', total: '22.000', delivery_charge: '2.000', created_at: '2026-11-07T12:00:00Z' };
+    const request = await setup(t, async (sql, params) => {
+        if (sql.startsWith('SELECT id, password')) return { rows: [{ id: '1', password }] };
+        if (sql.startsWith('UPDATE public.orders')) {
+            if (order.status === params[0]) return { rows: [] };
+            order = { ...order, status: params[0] };
+            return { rows: [order] };
+        }
+        if (sql.includes('FROM public.users')) {
+            lookups.push(params);
+            if (lookupFailure) throw new Error('Private database error');
+            return { rows: email === null ? [] : [{ name: 'Customer <Name>', email }] };
+        }
+        if (sql.includes('FROM public.order_items')) {
+            itemQueries.push({ sql, params });
+            if (itemLookupFailure) throw new Error('Private item lookup error');
+            return { rows: items };
+        }
+        if (sql.includes('FROM public.orders WHERE id')) return { rows: [order] };
+        throw new Error(`Unexpected query: ${sql}`);
+    }, { sendEmail: async message => {
+        emails.push(message);
+        assert.ok(['Confirmed', 'Delivered'].includes(order.status), 'Save the status before sending');
+        if (emailFailure === 'throw') throw new Error('Provider unavailable');
+        return emailFailure === 'error' ? { error: { message: 'Provider rejected' } } : { data: { id: 'test-only' } };
+    } });
+    await request('/login', 'POST', { password: 'secret' });
+    return { request, emails, lookups, itemQueries };
+}
+
+test('changing to Confirmed emails the stored customer and repeated or concurrent saves do not resend', async t => {
+    const { request, emails, lookups } = await setupOrderConfirmation(t);
+    const results = await Promise.all([
+        request('/orders/42', 'PATCH', { status: 'Confirmed' }),
+        request('/orders/42', 'PATCH', { status: 'Confirmed' }),
+    ]);
+    assert.ok(results.every(result => result.status === 200 && result.body.status === 'Confirmed'));
+    assert.equal(results.filter(result => result.body.confirmation_email === 'sent').length, 1);
+    assert.equal(emails.length, 1);
+    assert.deepEqual(lookups, [['7']]);
+    assert.equal(emails[0].to, 'customer@example.com');
+    assert.equal(emails[0].from, 'SalesBeast <orders@salebeastkw.com>');
+    assert.match(emails[0].subject, /order #42 is confirmed/);
+    assert.match(emails[0].text, /order #42 has been confirmed/);
+    assert.equal(emails[0].attachments, undefined);
+    await request('/orders/42', 'PATCH', { status: 'Confirmed' });
+    assert.equal(emails.length, 1);
+});
+
+test('other dropdown statuses do not send confirmation emails', async t => {
+    const { request, emails } = await setupOrderConfirmation(t);
+    for (const status of ['Cancelled', 'Processing']) {
+        const result = await request('/orders/42', 'PATCH', { status });
+        assert.equal(result.status, 200);
+        assert.equal(result.body.status, status);
+        assert.equal(result.body.confirmation_email, undefined);
+    }
+    assert.equal(emails.length, 0);
+});
+
+test('Delivered includes an invoice in the email and repeated or concurrent saves do not resend', async t => {
+    const { request, emails, lookups, itemQueries } = await setupOrderConfirmation(t);
+    await request('/orders/42', 'PATCH', { status: 'Confirmed' });
+    const results = await Promise.all([
+        request('/orders/42', 'PATCH', { status: 'Delivered' }),
+        request('/orders/42', 'PATCH', { status: 'Delivered' }),
+    ]);
+    assert.ok(results.every(result => result.status === 200 && result.body.status === 'Delivered'));
+    assert.equal(results.filter(result => result.body.confirmation_email === 'sent').length, 1);
+    assert.equal(emails.length, 2);
+    assert.deepEqual(lookups, [['7'], ['7']]);
+    assert.equal(emails[1].to, 'customer@example.com');
+    assert.equal(emails[1].from, 'SalesBeast <orders@salebeastkw.com>');
+    assert.match(emails[1].subject, /order #42 has been delivered/);
+    assert.match(emails[1].text, /order #42 has been delivered/);
+    assert.equal(emails[1].attachments, undefined);
+    assert.match(emails[1].html, /Invoice #SB-42/);
+    assert.match(emails[1].html, /Customer &lt;Name&gt;/);
+    assert.match(emails[1].html, /Order date: 07\/11\/2026/);
+    const rows = Array.from(emails[1].html.matchAll(/<tr>([\s\S]*?)<\/tr>/g), match => match[1]);
+    assert.equal(rows.length, 2);
+    assert.match(rows[0], /Cable &lt;Pro&gt; &amp; &quot;Plus&quot;/);
+    assert.match(rows[0], />2<\/td>/);
+    assert.match(rows[0], /8\.125 KD/);
+    assert.match(rows[0], /16\.250 KD/);
+    assert.match(rows[1], /Charger/);
+    assert.match(rows[1], /3\.500 KD/);
+    assert.match(rows[1], /7\.000 KD/);
+    for (const part of ['Subtotal: 23.250 KD', 'Delivery charge: 2.000 KD', 'Discount: 3.250 KD', 'Total: 22.000 KD']) {
+        assert.ok(emails[1].html.includes(part));
+        assert.ok(emails[1].text.includes(part));
+    }
+    assert.match(emails[1].text, /Cable <Pro> & "Plus" \| 2 \| 8\.125 KD \| 16\.250 KD/);
+    assert.equal(itemQueries.length, 1);
+    assert.deepEqual(itemQueries[0].params, ['42']);
+    assert.match(itemQueries[0].sql, /oi.purchase_price/);
+    assert.doesNotMatch(itemQueries[0].sql, /p\.price/);
+    await request('/orders/42', 'PATCH', { status: 'Delivered' });
+    assert.equal(emails.length, 2);
+});
+
+test('invoice item lookup failures or empty orders show an email warning while Delivered stays saved', async t => {
+    for (const options of [{ itemLookupFailure: true }, { items: [] }]) {
+        const { request, emails } = await setupOrderConfirmation(t, options);
+        const result = await request('/orders/42', 'PATCH', { status: 'Delivered' });
+        assert.equal(result.status, 200);
+        assert.equal(result.body.status, 'Delivered');
+        assert.equal(result.body.confirmation_email, 'failed');
+        assert.equal(emails.length, 0);
+    }
+});
+
+for (const status of ['Confirmed', 'Delivered']) {
+test(`email failures or unavailable customer email return a warning while keeping ${status} saved`, async t => {
+    for (const options of [{ emailFailure: 'throw' }, { emailFailure: 'error' }, { lookupFailure: true }, { email: null }, { email: ' ' }]) {
+        await t.test(JSON.stringify(options), async t => {
+            const { request, emails } = await setupOrderConfirmation(t, options);
+            const result = await request('/orders/42', 'PATCH', { status });
+            assert.equal(result.status, 200);
+            assert.equal(result.body.status, status);
+            assert.equal(result.body.confirmation_email, 'failed');
+            assert.ok(!JSON.stringify(result.body).includes('Private database error'));
+            assert.equal((await request('/orders/42', 'PATCH', { status })).body.status, status);
+            assert.equal(emails.length, options.emailFailure ? 1 : 0);
+        });
+    }
+});
+}
 
 test('admin orders handle empty lists, missing orders and database failures without leaking details', async t => {
     const password = await bcrypt.hash('secret', 4);

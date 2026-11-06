@@ -120,15 +120,16 @@ const PlaceOrder = async (req, res) => {
         }
         await connection.query("COMMIT");
 
-        // Send order email
-        try {
-            const itemsHtml = itemsInfo.map(item => {
+        // Share the purchased items between the work and customer emails.
+        const itemsHtml = itemsInfo.map(item => {
                 const itemTotal = Number(item.purchase_price) * item.quantity;
 
                 return `
             <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;">
-                    ${item.name}
+                    ${String(item.name ?? "").replace(/[&<>"']/g, character => ({
+                        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+                    })[character])}
                 </td>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">
                     ${item.quantity}
@@ -143,6 +144,8 @@ const PlaceOrder = async (req, res) => {
         `;
             }).join("");
 
+        // Send order email
+        try {
             const { data, error } = await resend.emails.send({
                 from: "SalesBeast <orders@salebeastkw.com>",
                 to: "aliakbarbhura@gmail.com",
@@ -204,6 +207,49 @@ const PlaceOrder = async (req, res) => {
 
         } catch (emailError) {
             console.error("Failed to send order email:", emailError);
+        }
+
+        // Fetch the stored customer email and send independently of the work email.
+        try {
+            const { rows: users } = await pool.query(
+                "SELECT email FROM public.users WHERE id = $1", [user_id]
+            );
+            const customerEmail = users[0]?.email?.trim();
+            if (customerEmail) {
+                const { error } = await resend.emails.send({
+                    from: "SalesBeast <orders@salebeastkw.com>",
+                    to: customerEmail,
+                    subject: `Your SalesBeast order #${order_id} has been placed`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 700px; margin: auto;">
+                            <h2>Order #${order_id} placed</h2>
+                            <p>Thank you for shopping with SalesBeast! Your order has been placed successfully.</p>
+                            <h3>Ordered Products</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background-color: #f5f5f5;">
+                                        <th style="padding: 10px; text-align: left;">Product</th>
+                                        <th style="padding: 10px; text-align: center;">Quantity</th>
+                                        <th style="padding: 10px; text-align: right;">Unit Price</th>
+                                        <th style="padding: 10px; text-align: right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${itemsHtml}</tbody>
+                            </table>
+                            <p>Delivery charge: ${deliveryCharge.toFixed(3)} KD<br>
+                            ${voucher ? `Voucher discount: ${(voucherDiscount / 1000).toFixed(3)} KD<br>` : ""}
+                            <strong>Total: ${orderTotal.toFixed(3)} KD</strong></p>
+                            <h3>Delivery Address</h3>
+                            ${deliveryAddressHtml}
+                        </div>
+                    `
+                });
+                if (error) console.error("Failed to send customer order confirmation:", error);
+            } else {
+                console.error("Customer order confirmation skipped: no email found for user", user_id);
+            }
+        } catch (emailError) {
+            console.error("Failed to send customer order confirmation:", emailError);
         }
 
         return res.status(201).json({ "msg": "success" });

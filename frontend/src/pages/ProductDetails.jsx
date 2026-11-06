@@ -5,6 +5,7 @@ import useFetch from "../CustomHooks/useFetch";
 import { useCart } from "../contexts/CartContext";
 import ProductMarkdown from "../Components/ProductMarkdown";
 import ProductPrice from "../Components/ProductPrice";
+import { getAvailableStock } from "../utils/cartStock";
 
 const apiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
@@ -80,7 +81,8 @@ function ProductDetails() {
   }
 
   const quantity = getItemQuantity(product.id);
-  const unavailable = Number(product.stock) === 0;
+  const stock = getAvailableStock(product);
+  const unavailable = stock === 0;
   const reminderSaved = reminders.includes(String(product.id));
   const requestReminder = () => {
     const next = [...new Set([...reminders, String(product.id)])];
@@ -231,7 +233,7 @@ function ProductDetails() {
                 <div className="inline-flex items-center rounded-xl border border-border bg-surface">
                   <button type="button" onClick={() => updateQuantity(product.id, quantity - 1)} aria-label={t("Remove one from cart")} className="flex size-12 items-center justify-center text-xl text-text-main hover:bg-surface-muted">−</button>
                   <span aria-live="polite" className="min-w-10 text-center font-semibold text-text-main">{quantity}</span>
-                  <button type="button" onClick={() => addToCart(product)} aria-label={t("Add one to cart")} className="flex size-12 items-center justify-center text-xl text-text-main hover:bg-surface-muted">+</button>
+                  <button type="button" onClick={() => addToCart(product)} disabled={quantity >= stock} aria-label={t("Add one to cart")} className="flex size-12 items-center justify-center text-xl text-text-main hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40">+</button>
                 </div>
                 <span className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-primary-soft px-6 font-semibold text-primary">
                   {t("Added to cart")}

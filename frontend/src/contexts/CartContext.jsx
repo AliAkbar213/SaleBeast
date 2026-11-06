@@ -1,24 +1,27 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { getProductPrice } from "../utils/productPrice"
+import { addCartItem, limitCartQuantity, setCartItemQuantity } from "../utils/cartStock"
 
 const CartContext = createContext(null)
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState(() => {
     const saved = localStorage.getItem("cart")
-    return saved ? JSON.parse(saved) : []
+    if (!saved) return []
+    return JSON.parse(saved).flatMap((item) => {
+      const quantity = limitCartQuantity(item, item.quantity)
+      return quantity ? [{ ...item, quantity }] : []
+    })
   })
 
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cartItems))
   }, [cartItems])
 
-  // Older saved carts predate ar_name. Enrich them without changing prices or quantities.
-  const untranslatedIds = JSON.stringify(cartItems
-    .filter((item) => !Object.hasOwn(item, "ar_name"))
-    .map((item) => item.id));
+  // Refresh saved stock and translations using the existing read-only product API.
+  const cartIds = JSON.stringify(cartItems.map((item) => item.id));
   useEffect(() => {
-    const ids = JSON.parse(untranslatedIds);
+    const ids = JSON.parse(cartIds);
     if (!ids.length) return;
     const controller = new AbortController();
     const api = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
@@ -27,33 +30,26 @@ export function CartProvider({ children }) {
         const response = await fetch(`${api}/api/products/${encodeURIComponent(id)}`, {
           credentials: "include", signal: controller.signal,
         });
+        if (response.status === 404) return { id, stock: 0 };
         if (!response.ok) return null;
         const product = await response.json();
-        return { id, ar_name: product.ar_name ?? null };
+        return { id, stock: product.stock, ar_name: product.ar_name ?? null };
       } catch { return null; }
     })).then((products) => {
       if (controller.signal.aborted) return;
-      const translations = new Map(products.filter(Boolean).map((product) => [product.id, product]));
-      if (translations.size) setCartItems((items) => items.map((item) =>
-        translations.has(item.id) ? { ...item, ar_name: translations.get(item.id).ar_name } : item));
+      const refreshed = new Map(products.filter(Boolean).map((product) => [product.id, product]));
+      if (refreshed.size) setCartItems((items) => items.flatMap((item) => {
+        if (!refreshed.has(item.id)) return [item];
+        const updated = { ...item, ...refreshed.get(item.id) };
+        const quantity = limitCartQuantity(updated, item.quantity);
+        return quantity ? [{ ...updated, quantity }] : [];
+      }));
     });
     return () => controller.abort();
-  }, [untranslatedIds]);
+  }, [cartIds]);
 
   const addToCart = (product) => {
-    setCartItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id)
-
-      if (existing) {
-        return prev.map((item) =>
-          item.id === product.id
-            ? { ...item, ...product, quantity: item.quantity + 1 }
-            : item
-        )
-      }
-
-      return [...prev, { ...product, quantity: 1 }]
-    })
+    setCartItems((prev) => addCartItem(prev, product))
   }
 
   const removeFromCart = (id) => {
@@ -61,16 +57,7 @@ export function CartProvider({ children }) {
   }
 
   const updateQuantity = (id, quantity) => {
-    if (quantity < 1) {
-      removeFromCart(id)
-      return
-    }
-
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, quantity } : item
-      )
-    )
+    setCartItems((prev) => setCartItemQuantity(prev, id, quantity))
   }
 
   const clearCart = () => setCartItems([])

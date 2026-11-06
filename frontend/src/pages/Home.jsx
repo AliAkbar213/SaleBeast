@@ -4,10 +4,11 @@ import { Link } from "react-router";
 import useFetch from "../CustomHooks/useFetch";
 import { useCart } from "../contexts/CartContext";
 import ProductPrice from "../Components/ProductPrice";
+import { getAvailableStock } from "../utils/cartStock";
 import WhatsAppIcon from "../Components/WhatsAppIcon";
 import "./Home.css";
 
-const isSoldOut = (product) => product.stock != null && Number(product.stock) <= 0;
+const isSoldOut = (product) => getAvailableStock(product) === 0;
 
 function Arrow({ back = false }) {
   const { isArabic } = useLanguage();
@@ -26,7 +27,7 @@ function CartButton({ product }) {
   const { t, productText } = useLanguage();
   const { addToCart, getItemQuantity, updateQuantity } = useCart();
   const quantity = getItemQuantity(product.id);
-  const atLimit = product.stock != null && quantity >= Number(product.stock);
+  const atLimit = quantity >= getAvailableStock(product);
   if (isSoldOut(product)) return <button className="store-add" disabled>{t("Out of stock")}</button>;
   if (quantity > 0) return (
     <div className="store-quantity">

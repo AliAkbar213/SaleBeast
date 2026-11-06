@@ -2,6 +2,8 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const { createHash, timingSafeEqual } = require('node:crypto');
 const { z } = require('zod');
+const { Resend } = require('resend');
+const { orderInvoiceEmail } = require('../order/orderInvoiceEmail');
 
 const idSchema = z.string().max(19).refine(value => /^[1-9]\d*$/.test(value) && BigInt(value) <= 9223372036854775807n);
 const money = z.union([z.string().regex(/^\d+(\.\d+)?$/), z.number().finite().nonnegative()]);
@@ -24,10 +26,14 @@ const productSchema = productFields.partial().strict().refine(value => Object.ke
 const createProductSchema = productFields.partial().required({ name: true, price: true }).strict();
 const columns = 'id, name, price, "desc", stock, category_id, key_features, discounted_price, ar_desc, ar_key_features, video, ar_name, image, images';
 const orderColumns = 'id, user_id, total, status, created_at, area_id, delivery_charge';
-const orderStatusSchema = z.object({ status: z.string().trim().min(1).max(100) }).strict();
+const orderStatusSchema = z.object({
+    status: z.string().trim().pipe(z.enum(['Processing', 'Confirmed', 'Delivered', 'Cancelled'])),
+}).strict();
 const digest = value => createHash('sha256').update(value).digest();
 
-module.exports = function adminRoute(pool = require('../../dbConnection')) {
+module.exports = function adminRoute(pool = require('../../dbConnection'), {
+    sendEmail = message => new Resend(process.env.RESEND_API_KEY).emails.send(message),
+} = {}) {
     const router = express.Router();
     const attempts = new Map();
     router.use((req, res, next) => {
@@ -109,15 +115,53 @@ module.exports = function adminRoute(pool = require('../../dbConnection')) {
     router.patch('/orders/:id', async (req, res) => {
         const parsed = orderStatusSchema.safeParse(req.body);
         if (!idSchema.safeParse(req.params.id).success || !parsed.success) {
-            return res.status(400).json({ err: 'Enter a status between 1 and 100 characters and a valid order ID.' });
+            return res.status(400).json({ err: 'Choose Processing, Confirmed, Delivered, or Cancelled and a valid order ID.' });
         }
         try {
             const { rows } = await pool.query(
-                `UPDATE public.orders SET status = $1 WHERE id = $2 RETURNING ${orderColumns}`,
+                `UPDATE public.orders SET status = $1 WHERE id = $2 AND status IS DISTINCT FROM $1 RETURNING ${orderColumns}`,
                 [parsed.data.status, req.params.id],
             );
-            if (!rows.length) return res.status(404).json({ err: 'Order no longer exists.' });
-            res.json(rows[0]);
+            if (!rows.length) {
+                // Repeated or concurrent saves of the same status must not send another email.
+                const existing = await pool.query(`SELECT ${orderColumns} FROM public.orders WHERE id = $1`, [req.params.id]);
+                if (!existing.rows.length) return res.status(404).json({ err: 'Order no longer exists.' });
+                return res.json(existing.rows[0]);
+            }
+            const order = rows[0];
+            if (['Confirmed', 'Delivered'].includes(order.status)) {
+                // The status has already been saved. Email failures must not undo it.
+                try {
+                    const { rows: users } = await pool.query('SELECT name, email FROM public.users WHERE id = $1', [order.user_id]);
+                    const customerEmail = users[0]?.email?.trim();
+                    if (!customerEmail) throw new Error('Customer email is unavailable');
+                    let invoice = {};
+                    if (order.status === 'Delivered') {
+                        const { rows: items } = await pool.query(`
+                            SELECT COALESCE(p.name, 'Product #' || oi.product_id::text) AS name,
+                                oi.quantity, oi.purchase_price
+                            FROM public.order_items oi
+                            LEFT JOIN public.products p ON p.id = oi.product_id
+                            WHERE oi.order_id = $1 ORDER BY oi.id`, [order.id]);
+                        invoice = orderInvoiceEmail(order, users[0], items);
+                    }
+                    const { error } = await sendEmail({
+                        from: 'SalesBeast <orders@salebeastkw.com>',
+                        to: customerEmail,
+                        subject: order.status === 'Delivered'
+                            ? `Your SalesBeast order #${order.id} has been delivered - invoice included`
+                            : `Your SalesBeast order #${order.id} is confirmed`,
+                        text: `Your order #${order.id} has been ${order.status === 'Delivered' ? 'delivered' : 'confirmed'}. Thank you for shopping with SalesBeast!`,
+                        ...invoice,
+                    });
+                    if (error) throw new Error(error.message || 'Email provider rejected the confirmation');
+                    return res.json({ ...order, confirmation_email: 'sent' });
+                } catch (error) {
+                    console.error('Failed to send order status confirmation:', error.message);
+                    return res.json({ ...order, confirmation_email: 'failed' });
+                }
+            }
+            res.json(order);
         } catch { res.status(500).json({ err: 'Unable to update order status.' }); }
     });
     router.get('/products', async (req, res) => {

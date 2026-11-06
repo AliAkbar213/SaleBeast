@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import useFetch from "../CustomHooks/useFetch"
 import { useCart } from "../contexts/CartContext"
 import ProductPrice from "../Components/ProductPrice"
+import { getAvailableStock } from "../utils/cartStock"
 
 function Products() {
   const { t, productText, dataName } = useLanguage();
@@ -222,7 +223,8 @@ function Products() {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
               {data.map((item) => {
                 const quantity = getItemQuantity(item.id)
-                const outOfStock = item.stock === 0 || item.stock === "0"
+                const stock = getAvailableStock(item)
+                const outOfStock = stock === 0
                 const reminder = reminders[String(item.id)]
 
                 return (
@@ -291,8 +293,9 @@ function Products() {
                           <button
                             type="button"
                             onClick={() => addToCart(item)}
+                            disabled={quantity >= stock}
                             aria-label={t("Add one {name} to cart", { name: productText(item) || t("Product") })}
-                            className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-base font-semibold text-text-light transition-colors duration-200 hover:bg-primary-hover active:bg-primary-active"
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-base font-semibold text-text-light transition-colors duration-200 hover:bg-primary-hover active:bg-primary-active disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             +
                           </button>

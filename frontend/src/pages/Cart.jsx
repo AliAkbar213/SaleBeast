@@ -5,6 +5,7 @@ import { AuthContext } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 import { getProductPrice } from "../utils/productPrice";
 import ProductPrice from "../Components/ProductPrice";
+import { getAvailableStock } from "../utils/cartStock";
 
 
 function Cart() {
@@ -51,7 +52,7 @@ function Cart() {
           <section aria-label={t("Items in your cart")} className="space-y-4">
             {cartItems.map((item) => {
               const quantity = Number(item.quantity) || 1;
-              const atLimit = Number.isFinite(Number(item.stock)) && quantity >= Number(item.stock);
+              const atLimit = quantity >= getAvailableStock(item);
 
               return (
                 <article key={item.id} className="flex gap-4 rounded-2xl border border-border bg-surface p-4 sm:gap-6 sm:p-5">
