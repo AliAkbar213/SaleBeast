@@ -300,5 +300,7 @@
   "processing": "قيد التجهيز",
   "shipped": "تم الشحن",
   "delivered": "تم التوصيل",
-  "cancelled": "ملغي"
+  "cancelled": "ملغي",
+  "Estimated delivery: 1–2 days": "مدة التوصيل المتوقعة: ١–٢ يوم",
+  "Usually delivered within 6–24 hours after order confirmation.": "عادةً ما يتم التوصيل خلال ٦–٢٤ ساعة بعد تأكيد الطلب."
 }

@@ -6,6 +6,7 @@ import { useCart } from "../contexts/CartContext";
 import { getProductPrice } from "../utils/productPrice";
 
 import DeliveryMap from "../Components/DeliveryMap";
+import EstimatedDelivery from "../Components/EstimatedDelivery";
 
 const blocks = Array.from({ length: 20 }, (_, index) => String(index + 1));
 const initialAddress = { governorateId: "", areaId: "", block: "", street: "", mobile: "", notes: "" };
@@ -151,7 +152,7 @@ function Checkout() {
   if (!user) return <Navigate to="/cart" replace />;
 
   if (orderPlaced) {
-    return <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8"><section className="w-full max-w-lg rounded-2xl border border-border bg-surface p-8 text-center shadow-sm sm:p-10"><div aria-hidden="true" className="mx-auto flex size-16 items-center justify-center rounded-full bg-primary-soft text-3xl text-primary">✓</div><p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-primary">{t("Order received")}</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-text-main">{t("Thank you for your order")}</h1><p className="mt-4 leading-7 text-text-muted">{t("We will contact you to arrange your cash-on-delivery order.")}</p><Link to="/products" className="mt-8 inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-6 font-bold text-text-light transition-colors hover:bg-primary-hover">{t("Continue shopping")}</Link></section></main>;
+    return <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8"><section className="w-full max-w-lg rounded-2xl border border-border bg-surface p-8 text-center shadow-sm sm:p-10"><div aria-hidden="true" className="mx-auto flex size-16 items-center justify-center rounded-full bg-primary-soft text-3xl text-primary">✓</div><p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-primary">{t("Order received")}</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-text-main">{t("Thank you for your order")}</h1><p className="mt-4 leading-7 text-text-muted">{t("We will contact you to arrange your cash-on-delivery order.")}</p><EstimatedDelivery className="mt-6" /><Link to="/products" className="mt-8 inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-6 font-bold text-text-light transition-colors hover:bg-primary-hover">{t("Continue shopping")}</Link></section></main>;
   }
 
   return (
@@ -182,7 +183,7 @@ function Checkout() {
               {voucherError && <p id="voucher-error" role="alert" className="mt-2 text-sm text-red-600">{errorText(voucherError)}</p>}
               {voucher && <div className="mt-3 flex items-center justify-between gap-3 text-sm"><p role="status" className="text-green-600">{t("Voucher applied")}</p><button type="button" disabled={isSubmitting} onClick={() => { setVoucher(null); setVoucherCode(""); setVoucherError(""); }} className="font-semibold text-text-muted hover:text-primary">{t("Remove voucher")}</button></div>}
               {voucher && <div className="mt-3 flex justify-between gap-4 text-sm font-semibold text-green-600"><span>{t("Voucher discount")}</span><span>−{formatPrice(voucherDiscount / 1000)}</span></div>}
-            </section><div className="flex items-center justify-between gap-4 py-6 font-bold text-text-main"><span className="text-lg">{t("Total")}</span><span className="text-xl">{formatPrice(orderTotal)}</span></div>{error && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">{errorText(error)}</p>}<button type="submit" disabled={isSubmitting || isCheckingVoucher} className="flex min-h-14 w-full items-center justify-center rounded-xl bg-primary px-6 font-bold text-text-light transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? t("Placing order…") : t("Place order")}</button><button type="button" onClick={() => navigate("/cart")} className="mt-3 w-full text-sm font-semibold text-text-muted hover:text-primary">{t("Return to cart")}</button></aside>
+            </section><div className="flex items-center justify-between gap-4 py-6 font-bold text-text-main"><span className="text-lg">{t("Total")}</span><span className="text-xl">{formatPrice(orderTotal)}</span></div>{error && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">{errorText(error)}</p>}<EstimatedDelivery className="mb-4" /><button type="submit" disabled={isSubmitting || isCheckingVoucher} className="flex min-h-14 w-full items-center justify-center rounded-xl bg-primary px-6 font-bold text-text-light transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? t("Placing order…") : t("Place order")}</button><button type="button" onClick={() => navigate("/cart")} className="mt-3 w-full text-sm font-semibold text-text-muted hover:text-primary">{t("Return to cart")}</button></aside>
         </form>
       )}
     </main>
