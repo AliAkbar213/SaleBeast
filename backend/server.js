@@ -9,6 +9,8 @@ const orderRoute = require("./routes/order/orderRoute");
 const addressRoute = require("./routes/address/addressRoute");
 const adminRoute = require("./routes/admin/adminRoute");
 
+const PORT = process.env.PORT || 5000
+
 const app = express();
 
 app.set('trust proxy', 1)
@@ -39,6 +41,6 @@ app.get("/api/products", async (req, res) => {
 
 app.use('/images', express.static('product_images'))
 
-app.listen(5000, () => {
+app.listen(PORT, () => {
     console.log("listening on port: 5000");
 })
