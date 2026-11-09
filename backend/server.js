@@ -27,14 +27,14 @@ app.use(cors({
 
 app.use(express.json())
 
+app.use('/api/admin', adminRoute())
+
 app.use(session(sessionOptions()))
 
 app.use('/api/products', productRoute)
 app.use('/api/user', userRoute)
 app.use('/api/order', orderRoute)
 app.use('/api/address', addressRoute)
-app.use('/api/admin', adminRoute())
-
 app.get("/api/products", async (req, res) => {
     res.json({ message: "success" })
 })

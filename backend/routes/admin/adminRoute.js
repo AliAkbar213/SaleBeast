@@ -1,4 +1,5 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const { Resend } = require('resend');
 const { orderInvoiceEmail } = require('../order/orderInvoiceEmail');
@@ -29,6 +30,7 @@ const orderStatusSchema = z.object({
 }).strict();
 
 module.exports = function adminRoute(pool = require('../../dbConnection'), {
+    tokenSecret = process.env.ADMIN_TOKEN_SECRET || process.env.SESSION_SECRET,
     sendEmail = message => new Resend(process.env.RESEND_API_KEY).emails.send(message),
 } = {}) {
     const router = express.Router();
@@ -60,36 +62,34 @@ module.exports = function adminRoute(pool = require('../../dbConnection'), {
             const { rows } = await pool.query('SELECT id, password FROM public.admin WHERE password IS NOT NULL ORDER BY id');
             const admin = rows.find(row => row.password === password);
             if (!admin) return res.status(401).json({ err: 'Incorrect admin password.' });
-            const user = req.session.user;
-            req.session.regenerate(err => {
-                if (err) return res.status(500).json({ err: 'Unable to start admin session.' });
-                if (user) req.session.user = user;
-                req.session.admin = { id: admin.id, expires: Date.now() + 2 * 60 * 60 * 1000 };
-                req.session.save(err => {
-                    if (err) return res.status(500).json({ err: 'Unable to save admin session.' });
-                    attempts.delete(req.ip);
-                    res.json({ authenticated: true });
-                });
+            if (!tokenSecret) return res.status(503).json({ err: 'Admin authentication is not configured.' });
+            const token = jwt.sign({ role: 'admin' }, tokenSecret, {
+                algorithm: 'HS256', subject: String(admin.id), expiresIn: '2h',
+                issuer: 'salebeast', audience: 'salebeast-admin',
             });
+            attempts.delete(req.ip);
+            res.json({ authenticated: true, token });
         } catch {
             res.status(500).json({ err: 'Unable to check admin password.' });
         }
     });
 
     router.use((req, res, next) => {
-        if (!req.session.admin || req.session.admin.expires <= Date.now()) {
-            delete req.session.admin;
+        const authorization = req.get('Authorization') || '';
+        try {
+            if (!tokenSecret || !authorization.startsWith('Bearer ')) throw new Error('Missing token');
+            const claims = jwt.verify(authorization.slice(7), tokenSecret, {
+                algorithms: ['HS256'], issuer: 'salebeast', audience: 'salebeast-admin',
+            });
+            if (claims.role !== 'admin' || !claims.sub || !Number.isFinite(claims.exp)) throw new Error('Invalid token');
+            next();
+        } catch {
             return res.status(401).json({ err: 'Please enter the admin password to continue.' });
         }
-        next();
     });
     router.get('/', (req, res) => res.json({ authenticated: true }));
-    router.post('/logout', (req, res) => {
-        delete req.session.admin;
-        req.session.save(err => err
-            ? res.status(500).json({ err: 'Unable to log out.' })
-            : res.json({ authenticated: false }));
-    });
+    // Stateless logout: the client discards its token; issued tokens expire after two hours.
+    router.post('/logout', (req, res) => res.json({ authenticated: false }));
     router.get('/orders', async (req, res) => {
         try {
             const { rows } = await pool.query(`SELECT ${orderColumns} FROM public.orders ORDER BY created_at DESC, id DESC`);

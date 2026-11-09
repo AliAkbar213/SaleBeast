@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import AdminOrders from '../Components/AdminOrders';
 
+const tokenStorageKey = 'salebeast.adminToken';
 const api = `${import.meta.env.VITE_API_URL || ''}/api/admin`;
 const inputClass = 'mt-2 w-full rounded-md border border-border bg-white px-3 py-2 text-text-main';
 const buttonClass = 'rounded-md bg-primary px-5 py-2.5 font-bold text-white disabled:opacity-50';
@@ -13,8 +14,18 @@ const textFields = [
 ];
 
 export default function Admin() {
-  const [authenticated, setAuthenticated] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [token, setTokenState] = useState(() => {
+    try { return sessionStorage.getItem(tokenStorageKey) || ''; }
+    catch { return ''; }
+  });
+  const setToken = useCallback(value => {
+    try {
+      if (value) sessionStorage.setItem(tokenStorageKey, value);
+      else sessionStorage.removeItem(tokenStorageKey);
+    } catch { /* Keep in-memory login available when browser storage is blocked. */ }
+    setTokenState(value);
+  }, []);
+  const authenticated = Boolean(token);
   const [password, setPassword] = useState('');
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -23,15 +34,17 @@ export default function Admin() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [refresh, setRefresh] = useState(0);
+  const loadProducts = () => setRefresh(value => value + 1);
 
-  async function request(path, options = {}) {
+  async function request(path, options = {}, accessToken = token) {
     const response = await fetch(`${api}${path}`, {
-      ...options, credentials: 'include',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Request': '1' },
+      ...options, credentials: 'omit',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Request': '1', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
     });
     const data = await response.json();
     if (response.status === 401) {
-      setAuthenticated(false);
+      setToken('');
       setProducts([]);
       setForm(null);
     }
@@ -39,50 +52,43 @@ export default function Admin() {
     return data;
   }
 
-  async function loadProducts() {
-    const [items, groups] = await Promise.all([request('/products'), request('/categories')]);
-    setProducts(items);
-    setCategories(groups);
-  }
-
   useEffect(() => {
-    let active = true;
-    async function checkSession() {
+    if (!token) return;
+    const controller = new AbortController();
+    async function loadProducts() {
       try {
-        const response = await fetch(api, { credentials: 'include' });
-        if (!response.ok) {
-          if (response.status !== 401) throw new Error('Unable to check admin access.');
-          return;
-        }
-        const responses = await Promise.all(['/products', '/categories'].map(path => fetch(`${api}${path}`, { credentials: 'include' })));
-        if (responses.some(item => !item.ok)) throw new Error('Unable to load admin data. Please sign in again.');
-        const [items, groups] = await Promise.all(responses.map(item => item.json()));
-        if (active) { setAuthenticated(true); setProducts(items); setCategories(groups); }
-      } catch (err) { if (active) setError(err.message); }
-      finally { if (active) setChecking(false); }
+        const data = await Promise.all(['/products', '/categories'].map(async path => {
+          const response = await fetch(`${api}${path}`, {
+            credentials: 'omit', signal: controller.signal,
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (controller.signal.aborted) return;
+          if (response.status === 401) setToken('');
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.err || 'Unable to load admin data.');
+          return result;
+        }));
+        if (!controller.signal.aborted) { setProducts(data[0]); setCategories(data[1]); }
+      } catch (err) {
+        if (!controller.signal.aborted) setError(err.message);
+      }
     }
-    checkSession();
-    return () => { active = false; };
-  }, []);
+    loadProducts();
+    return () => controller.abort();
+  }, [token, setToken, refresh]);
 
   async function login(event) {
     event.preventDefault();
     setBusy(true); setError(''); setMessage('');
     try {
-      await request('/login', { method: 'POST', body: JSON.stringify({ password }) });
-      setPassword(''); setAuthenticated(true);
-      await loadProducts();
+      const result = await request('/login', { method: 'POST', body: JSON.stringify({ password }) });
+      setPassword(''); setToken(result.token);
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
 
-  async function logout() {
-    setBusy(true); setError('');
-    try {
-      await request('/logout', { method: 'POST' });
-      setAuthenticated(false); setProducts([]); setForm(null); setMessage('');
-    } catch (err) { setError(err.message); }
-    finally { setBusy(false); }
+  function logout() {
+    setToken(''); setProducts([]); setCategories([]); setForm(null); setMessage(''); setError('');
   }
 
   function addProduct() {
@@ -134,7 +140,6 @@ export default function Admin() {
     finally { setBusy(false); }
   }
 
-  if (checking) return <main className="page-container py-16">Checking admin access…</main>;
 
   return (
     <main className="page-container py-10" dir="ltr">
@@ -196,7 +201,7 @@ export default function Admin() {
             </table>
             {!products.length && <p className="p-6 text-text-muted">No products found.</p>}
           </div>
-          <AdminOrders setAuthenticated={setAuthenticated} />
+          <AdminOrders token={token} onUnauthorized={setToken} />
         </>
       )}
     </main>

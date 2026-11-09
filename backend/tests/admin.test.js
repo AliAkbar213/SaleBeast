@@ -1,26 +1,27 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');
-const session = require('express-session');
 const adminRoute = require('../routes/admin/adminRoute');
 
 async function setup(t, query, { sendEmail = async () => { throw new Error('Unexpected email send'); } } = {}) {
     const app = express();
     app.use(express.json());
-    app.use(session({ secret: 'admin-test-secret', resave: false, saveUninitialized: false }));
-    app.use('/api/admin', adminRoute({ query }, { sendEmail }));
+    app.use('/api/admin', adminRoute({ query }, { sendEmail, tokenSecret: 'admin-test-secret' }));
     const server = app.listen(0, '127.0.0.1');
     await new Promise(resolve => server.once('listening', resolve));
     t.after(() => new Promise(resolve => server.close(resolve)));
-    let cookie = '';
+    let token = '';
     return async (path = '', method = 'GET', body, withHeader = true) => {
         const response = await fetch(`http://127.0.0.1:${server.address().port}/api/admin${path}`, {
             method,
-            headers: { 'Content-Type': 'application/json', ...(withHeader ? { 'X-Admin-Request': '1' } : {}), ...(cookie ? { Cookie: cookie } : {}) },
+            headers: { 'Content-Type': 'application/json', ...(withHeader ? { 'X-Admin-Request': '1' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
             ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         });
-        if (response.headers.get('set-cookie')) cookie = response.headers.get('set-cookie').split(';')[0];
-        return { status: response.status, body: await response.json() };
+        assert.equal(response.headers.get('set-cookie'), null);
+        const data = await response.json();
+        if (data.token) token = data.token;
+        if (path === '/logout') token = '';
+        return { status: response.status, body: data };
     };
 }
 
@@ -32,7 +33,7 @@ test('admin endpoints reject unauthenticated access and writes without the custo
     assert.equal((await request('/login', 'POST', { password: 'secret' }, false)).status, 403);
 });
 
-test('plain-text database password authenticates without modification, logout revokes access', async t => {
+test('plain-text database password authenticates without modification, discarding token on logout removes client access', async t => {
     const calls = [];
     const request = await setup(t, async (sql, params) => {
         calls.push({ sql, params });

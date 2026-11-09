@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react';
 const api = `${import.meta.env.VITE_API_URL || ''}/api/admin/orders`;
 const orderStatuses = ['Processing', 'Confirmed', 'Delivered', 'Cancelled'];
 
-async function requestOrders(path = '', options = {}) {
+async function requestOrders(token, path = '', options = {}) {
   const response = await fetch(`${api}${path}`, {
     ...options,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'X-Admin-Request': '1' },
+    credentials: 'omit',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Request': '1', Authorization: `Bearer ${token}` },
   });
   const data = await response.json();
   if (!response.ok) throw Object.assign(new Error(data.err || 'Unable to load orders.'), { status: response.status });
@@ -23,7 +23,7 @@ function formatPrice(value) {
   return value == null ? '—' : Number(value).toFixed(3);
 }
 
-export default function AdminOrders({ setAuthenticated }) {
+export default function AdminOrders({ token, onUnauthorized }) {
   const [orders, setOrders] = useState([]);
   const [drafts, setDrafts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -36,18 +36,18 @@ export default function AdminOrders({ setAuthenticated }) {
     const controller = new AbortController();
     async function load() {
       try {
-        const data = await requestOrders('', { signal: controller.signal });
+        const data = await requestOrders(token, '', { signal: controller.signal });
         if (!controller.signal.aborted) { setOrders(data); setDrafts({}); }
       } catch (err) {
         if (!controller.signal.aborted) {
           setError(err.message);
-          if (err.status === 401) setAuthenticated(false);
+          if (err.status === 401) onUnauthorized('');
         }
       } finally { if (!controller.signal.aborted) setLoading(false); }
     }
     load();
     return () => controller.abort();
-  }, [attempt, setAuthenticated]);
+  }, [attempt, token, onUnauthorized]);
 
   async function saveStatus(event, order) {
     event.preventDefault();
@@ -56,7 +56,7 @@ export default function AdminOrders({ setAuthenticated }) {
     if (!orderStatuses.includes(status)) { setError('Choose an order status.'); return; }
     setSaving(order.id); setError(''); setMessage('');
     try {
-      const updated = await requestOrders(`/${order.id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+      const updated = await requestOrders(token, `/${order.id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
       setOrders(items => items.map(item => item.id === updated.id ? updated : item));
       setDrafts(current => { const next = { ...current }; delete next[order.id]; return next; });
       const confirmationType = updated.status === 'Delivered' ? 'delivery' : 'order';
@@ -67,7 +67,7 @@ export default function AdminOrders({ setAuthenticated }) {
       }
     } catch (err) {
       setError(err.message);
-      if (err.status === 401) setAuthenticated(false);
+      if (err.status === 401) onUnauthorized('');
     } finally { setSaving(null); }
   }
 
