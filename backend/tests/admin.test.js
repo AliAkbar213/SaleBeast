@@ -2,7 +2,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');
 const session = require('express-session');
-const bcrypt = require('bcrypt');
 const adminRoute = require('../routes/admin/adminRoute');
 
 async function setup(t, query, { sendEmail = async () => { throw new Error('Unexpected email send'); } } = {}) {
@@ -33,7 +32,7 @@ test('admin endpoints reject unauthenticated access and writes without the custo
     assert.equal((await request('/login', 'POST', { password: 'secret' }, false)).status, 403);
 });
 
-test('database password authenticates, plain text upgrades to bcrypt, logout revokes access', async t => {
+test('plain-text database password authenticates without modification, logout revokes access', async t => {
     const calls = [];
     const request = await setup(t, async (sql, params) => {
         calls.push({ sql, params });
@@ -41,16 +40,15 @@ test('database password authenticates, plain text upgrades to bcrypt, logout rev
     });
     assert.equal((await request('/login', 'POST', { password: 'wrong' })).status, 401);
     assert.equal((await request('/login', 'POST', { password: 'secret' })).status, 200);
-    const upgrade = calls.find(call => call.sql.startsWith('UPDATE public.admin'));
-    assert.equal(await bcrypt.compare('secret', upgrade.params[0]), true);
+    assert.equal(calls.some(call => call.sql.startsWith('UPDATE public.admin')), false);
     assert.equal((await request()).body.authenticated, true);
     assert.equal((await request('/products')).status, 200);
     assert.equal((await request('/logout', 'POST')).status, 200);
     assert.equal((await request('/products')).status, 401);
 });
 
-test('hashed passwords work; updates allow only product fields and preserve omitted media', async t => {
-    const password = await bcrypt.hash('secret', 4);
+test('updates allow only product fields and preserve omitted media', async t => {
+    const password = 'secret';
     const calls = [];
     const request = await setup(t, async (sql, params) => {
         calls.push({ sql, params });
@@ -76,7 +74,7 @@ test('hashed passwords work; updates allow only product fields and preserve omit
 });
 
 test('admin products return and update image strings and gallery arrays, including clearing them', async t => {
-    const password = await bcrypt.hash('secret', 4);
+    const password = 'secret';
     const product = { id: '1', image: '/images/main.png', images: ['/images/one.png', '/images/two.png'] };
     const calls = [];
     const request = await setup(t, async (sql, params) => {
@@ -110,7 +108,7 @@ test('foreign key failures produce clear messages for deletion and category chan
 });
 
 test('creating products validates required fields and inserts media with a generated ID', async t => {
-    const password = await bcrypt.hash('secret', 4);
+    const password = 'secret';
     const calls = [];
     const product = { id: '12', name: 'New product', price: '2.500', image: '/images/main.png', images: ['/images/one.png', '/images/two.png'] };
     const request = await setup(t, async (sql, params) => {
@@ -141,7 +139,7 @@ test('repeated password failures are rate limited', async t => {
 });
 
 test('admin orders list all users newest first and only permit validated status updates', async t => {
-    const password = await bcrypt.hash('secret', 4);
+    const password = 'secret';
     const orders = [
         { id: '2', user_id: '8', total: '12.500', status: 'Processing', created_at: '2026-11-06T00:00:00Z', area_id: '3', delivery_charge: '1.000' },
         { id: '1', user_id: null, total: null, status: null, created_at: '2026-11-05T00:00:00Z', area_id: null, delivery_charge: null },
@@ -177,7 +175,7 @@ async function setupOrderConfirmation(t, { email = 'customer@example.com', email
         { name: 'Charger', quantity: 2, purchase_price: '3.500' },
     ],
 } = {}) {
-    const password = await bcrypt.hash('secret', 4);
+    const password = 'secret';
     const emails = [];
     const lookups = [];
     const itemQueries = [];
@@ -311,7 +309,7 @@ test(`email failures or unavailable customer email return a warning while keepin
 }
 
 test('admin orders handle empty lists, missing orders and database failures without leaking details', async t => {
-    const password = await bcrypt.hash('secret', 4);
+    const password = 'secret';
     let fail = false;
     const request = await setup(t, async sql => {
         if (sql.startsWith('SELECT id, password')) return { rows: [{ id: '7', password }] };

@@ -1,6 +1,4 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
-const { createHash, timingSafeEqual } = require('node:crypto');
 const { z } = require('zod');
 const { Resend } = require('resend');
 const { orderInvoiceEmail } = require('../order/orderInvoiceEmail');
@@ -29,7 +27,6 @@ const orderColumns = 'id, user_id, total, status, created_at, area_id, delivery_
 const orderStatusSchema = z.object({
     status: z.string().trim().pipe(z.enum(['Processing', 'Confirmed', 'Delivered', 'Cancelled'])),
 }).strict();
-const digest = value => createHash('sha256').update(value).digest();
 
 module.exports = function adminRoute(pool = require('../../dbConnection'), {
     sendEmail = message => new Resend(process.env.RESEND_API_KEY).emails.send(message),
@@ -61,21 +58,8 @@ module.exports = function adminRoute(pool = require('../../dbConnection'), {
         }
         try {
             const { rows } = await pool.query('SELECT id, password FROM public.admin WHERE password IS NOT NULL ORDER BY id');
-            let admin;
-            for (const row of rows) {
-                if (!row.password) continue;
-                const hashed = /^\$2[aby]\$/.test(row.password);
-                const matches = hashed
-                    ? await bcrypt.compare(password, row.password)
-                    : timingSafeEqual(digest(password), digest(row.password));
-                if (matches) { admin = row; break; }
-            }
+            const admin = rows.find(row => row.password === password);
             if (!admin) return res.status(401).json({ err: 'Incorrect admin password.' });
-            // Upgrade existing plain-text database passwords after successful verification.
-            if (!/^\$2[aby]\$/.test(admin.password)) {
-                await pool.query('UPDATE public.admin SET password = $1 WHERE id = $2 AND password = $3',
-                    [await bcrypt.hash(password, 12), admin.id, admin.password]);
-            }
             const user = req.session.user;
             req.session.regenerate(err => {
                 if (err) return res.status(500).json({ err: 'Unable to start admin session.' });
